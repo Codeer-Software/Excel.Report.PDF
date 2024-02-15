@@ -2,7 +2,7 @@
 
 ## Features ...
 Convert Excel to PDF.<br>
-<img src="Image/Sample1.png" width="400">
+<img src="Image/Sample1.png" width="800">
 ## Getting Started
 Excel.Report.PDF from NuGet.
 
