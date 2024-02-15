@@ -73,6 +73,26 @@ namespace Test.Properties {
         /// <summary>
         ///   型 System.Byte[] のローカライズされたリソースを検索します。
         /// </summary>
+        internal static byte[] NotoSansJP_ExtraBold {
+            get {
+                object obj = ResourceManager.GetObject("NotoSansJP_ExtraBold", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   型 System.Byte[] のローカライズされたリソースを検索します。
+        /// </summary>
+        internal static byte[] NotoSansJP_Regular {
+            get {
+                object obj = ResourceManager.GetObject("NotoSansJP_Regular", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   型 System.Byte[] のローカライズされたリソースを検索します。
+        /// </summary>
         internal static byte[] NotoSansJP_VariableFont_wght {
             get {
                 object obj = ResourceManager.GetObject("NotoSansJP_VariableFont_wght", resourceCulture);

@@ -188,7 +188,11 @@ namespace Excel.Report.PDF
 
             // Font
             double fontSize = cell.Style.Font.FontSize;
-            XFont font = new XFont(cell.Style.Font.FontName, fontSize * scaling);
+            var fontStyle = XFontStyleEx.Regular;
+            if (cell.Style.Font.Bold) fontStyle |= XFontStyleEx.Bold;
+            if (cell.Style.Font.Italic) fontStyle |= XFontStyleEx.Italic;
+            if (cell.Style.Font.Underline != XLFontUnderlineValues.None) fontStyle |= XFontStyleEx.Underline;
+            XFont font = new XFont(cell.Style.Font.FontName, fontSize * scaling, fontStyle);
 
             var text = cell.GetFormattedString();
             var xFontColor = _openClosedXML.ChangeColor(cell.Style.Font.FontColor) ?? XColor.FromArgb(255, 0, 0, 0);

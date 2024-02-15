@@ -1,9 +1,6 @@
 ﻿using ClosedXML.Excel;
-using DocumentFormat.OpenXml.Office2016.Drawing.ChartDrawing;
-using DocumentFormat.OpenXml.Spreadsheet;
-using DocumentFormat.OpenXml.Wordprocessing;
 using Excel.Report.PDF;
-using System.IO;
+using PdfSharp.Fonts;
 
 namespace Test
 {
@@ -51,6 +48,18 @@ namespace Test
             }
         }
 
+        [OneTimeSetUp]
+        public void OneTimeSetUp()
+        {
+            GlobalFontSettings.FontResolver = new CustomFontResolver();
+
+            if (Directory.Exists(TestEnvironment.TestResultsPath))
+            {
+                Directory.Delete(TestEnvironment.TestResultsPath, true);
+            }
+            Directory.CreateDirectory(TestEnvironment.TestResultsPath);
+        }
+
         [Test]
         public async Task Test1()
         {
@@ -94,6 +103,9 @@ namespace Test
                 await book.Worksheet(1).OverWrite(new ExcelSymbolConverter(data));
                 book.SaveAs(Path.Combine(TestEnvironment.TestResultsPath, "QuotationDst.xlsx"));
             }
+
+            using var outStream = ExcelConverter.ConvertToPdf(Path.Combine(TestEnvironment.TestResultsPath, "QuotationDst.xlsx"), 1);
+            File.WriteAllBytes(Path.Combine(TestEnvironment.TestResultsPath, "Quotation.pdf"), outStream.ToArray());
         }
 
     }

@@ -7,9 +7,13 @@ namespace Test
     {
         public byte[] GetFont(string faceName)
             //Implement so that you can get as many fonts as you need.
-            => Resources.NotoSansJP_VariableFont_wght;
+            => faceName.EndsWith("#b") ? Resources.NotoSansJP_ExtraBold : Resources.NotoSansJP_Regular;
 
         public FontResolverInfo ResolveTypeface(string familyName, bool isBold, bool isItalic)
-            => new FontResolverInfo(familyName);
+        {
+            var faceName = familyName; 
+            if (isBold) faceName += "#b";
+            return new FontResolverInfo(faceName);
+        }
     }
 }
