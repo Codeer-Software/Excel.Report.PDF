@@ -69,5 +69,15 @@ namespace Test.Properties {
                 return ((byte[])(obj));
             }
         }
+        
+        /// <summary>
+        ///   型 System.Byte[] のローカライズされたリソースを検索します。
+        /// </summary>
+        internal static byte[] NotoSansJP_VariableFont_wght {
+            get {
+                object obj = ResourceManager.GetObject("NotoSansJP_VariableFont_wght", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
     }
 }
