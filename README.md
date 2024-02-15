@@ -3,6 +3,10 @@
 ## Features ...
 Convert Excel to PDF.<br>
 <img src="Image/Sample1.png" width="800">
+
+Overwrite Excel with data according to the symbol.<br>
+<img src="Image/Sample2.png" width="800">
+
 ## Getting Started
 Excel.Report.PDF from NuGet.
 
