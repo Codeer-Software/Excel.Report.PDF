@@ -143,8 +143,6 @@ namespace Excel.Report.PDF
             }
             else if (src.ColorType == XLColorType.Theme)
             {
-                Console.WriteLine(src.ThemeColor);
-
                 Color? netColor = null;
                 if (XLThemeColor.Accent1 <= src.ThemeColor && src.ThemeColor <= XLThemeColor.Accent6)
                 {
