@@ -78,6 +78,7 @@ namespace Excel.Report.PDF
                 if (page == null) page = pdf.AddPage();
                 using var gfx = XGraphics.FromPdfPage(page);
                 page = null;
+                var drawLineCache = new DrawLineCache(gfx);
 
                 // Since there are duplicate parts, the loops are separated to prevent overwriting.
                 foreach (var cellInfo in allCells[i])
@@ -86,7 +87,7 @@ namespace Excel.Report.PDF
                 }
                 foreach (var cellInfo in allCells[i])
                 {
-                    DrawRuledLine(gfx, scaling, cellInfo);
+                    DrawRuledLine(drawLineCache, scaling, cellInfo);
                 }
                 foreach (var cellInfo in allCells[i])
                 {
@@ -116,7 +117,23 @@ namespace Excel.Report.PDF
             }
         }
 
-        void DrawRuledLine(XGraphics gfx, double scaling, CellInfo cellInfo)
+        // If you draw two lines in the same place, it will be darker, so skip the second one.
+        class DrawLineCache
+        {
+            XGraphics _gfx;
+            Dictionary<string, bool> _cache = new Dictionary<string, bool>();
+            public DrawLineCache(XGraphics gfx) => _gfx = gfx;
+
+            public void DrawLine(XPen xPen, double x1, double y1, double x2, double y2)
+            {
+                var key = $"({Math.Min(x1, x2)},{Math.Min(y1, y2)}),({Math.Max(x1, x2)},{Math.Max(y1, y2)})";
+                if (_cache.ContainsKey(key)) return;
+                _cache.Add(key, true);
+                _gfx.DrawLine(xPen, x1, y1, x2, y2);
+            }
+        }
+
+        void DrawRuledLine(DrawLineCache gfx, double scaling, CellInfo cellInfo)
         {
             var cell = cellInfo.Cell!;
 
