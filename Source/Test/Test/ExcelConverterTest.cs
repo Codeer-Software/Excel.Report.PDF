@@ -23,8 +23,7 @@ namespace Test
         public void Convert(string name)
         {
             var workbookPath = Path.Combine(TestEnvironment.PdfSrcPath, $"{name}.xlsx");
-            using var stream = new FileStream(workbookPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-            using var outStream = ExcelConverter.ConvertToPdf(stream, 1);
+            using var outStream = ExcelConverter.ConvertToPdf(workbookPath, 1);
             File.WriteAllBytes(Path.Combine(TestEnvironment.TestResultsPath, $"{name}.pdf"), outStream.ToArray());
         }
     }
