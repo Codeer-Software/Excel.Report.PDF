@@ -44,11 +44,11 @@ File.WriteAllBytes(pdfPath, outStream.ToArray());
 There is also a function to overwrite Excel.
 First, create an Excel file according to the rules.
 
-# 1. [$]
+### 1. [$]
 Write the string you want to convey to the program after the $ sign.<br>
 <img src="Image/SymbolDollar.png">
 
-# 2. [#LoopRow($elements, elementName, copyRowCount)]
+### 2. [#LoopRow($elements, elementName, copyRowCount)]
 It can be specified in column A. Copies the specified row as many times as copyRowCount and adds the row.
 In the copied column, you can specify the symbol of the repeating element using elementName.
 
