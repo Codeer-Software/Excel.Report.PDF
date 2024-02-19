@@ -34,15 +34,37 @@ namespace Excel.Report.PDF
             Workbook.Dispose();
         }
 
+        WorksheetPart GetWorkSheetPartByPosition(int sheetPosition)
+        {
+            var workbookPart = _document.WorkbookPart;
+            if (workbookPart == null) throw new InvalidDataException("Invalid sheet"); 
+            var sheet = workbookPart.Workbook.Sheets?.Elements<DocumentFormat.OpenXml.Spreadsheet.Sheet>().ElementAt(sheetPosition - 1);
+            if (sheet == null) throw new InvalidDataException("Invalid sheet");
+            var workSheetPart = workbookPart.GetPartById(sheet.Id?.ToString() ?? string.Empty) as WorksheetPart;
+            if (workSheetPart == null) throw new InvalidDataException("Invalid sheet");
+            return workSheetPart;
+        }
+
+        WorksheetPart GetWorkSheetPartByName(string sheetName)
+        {
+            var workbookPart = _document.WorkbookPart;
+            if (workbookPart == null) throw new InvalidDataException("Invalid sheet");
+            var sheet = workbookPart.Workbook.Descendants<DocumentFormat.OpenXml.Spreadsheet.Sheet>().FirstOrDefault(s => s.Name == sheetName);
+            if (sheet == null) throw new InvalidDataException("Invalid sheet");
+            var workSheetPart = workbookPart.GetPartById(sheet.Id?.ToString() ?? string.Empty) as WorksheetPart;
+            if (workSheetPart == null) throw new InvalidDataException("Invalid sheet");
+            return workSheetPart;
+        }
+
         internal List<List<CellInfo>> GetCellInfo(int sheetPosition, double pdfWidthSrc, double pdfHeightSrc, out double scaling)
-            => GetCellInfo(Workbook.Worksheet(sheetPosition), pdfWidthSrc, pdfHeightSrc, out scaling);
+            => GetCellInfo(Workbook.Worksheet(sheetPosition), GetWorkSheetPartByPosition(sheetPosition), pdfWidthSrc, pdfHeightSrc, out scaling);
 
         internal List<List<CellInfo>> GetCellInfo(string sheetName, double pdfWidthSrc, double pdfHeightSrc, out double scaling)
-            => GetCellInfo(Workbook.Worksheet(sheetName), pdfWidthSrc, pdfHeightSrc, out scaling);
+            => GetCellInfo(Workbook.Worksheet(sheetName), GetWorkSheetPartByName(sheetName), pdfWidthSrc, pdfHeightSrc, out scaling);
 
-        List<List<CellInfo>> GetCellInfo(IXLWorksheet ws, double pdfWidthSrc, double pdfHeightSrc, out double scaling)
+        List<List<CellInfo>> GetCellInfo(IXLWorksheet ws, WorksheetPart worksheetPart, double pdfWidthSrc, double pdfHeightSrc, out double scaling)
             => GetCellInfo(ws.PageSetup, pdfWidthSrc, pdfHeightSrc,
-                GetPageRanges(ws), ws.MergedRanges.ToArray(), ws.Pictures.OfType<IXLPicture>().ToArray(), out scaling);
+                GetPageRanges(ws, worksheetPart), ws.MergedRanges.ToArray(), ws.Pictures.OfType<IXLPicture>().ToArray(), out scaling);
 
         internal XPen ConvertToXPen(XLBorderStyleValues borderStyle, XLColor? color, double scale)
         {
@@ -241,9 +263,9 @@ namespace Excel.Report.PDF
             internal double Width { get; set; }
         }
 
-        IXLRange[] GetPageRanges(IXLWorksheet ws)
+        IXLRange[] GetPageRanges(IXLWorksheet ws, WorksheetPart worksheetPart)
         {
-            GetSheetMaxRowCol(ws, out var maxRow, out var maxColumn);
+            GetSheetMaxRowCol(worksheetPart, out var maxRow, out var maxColumn);
             if (maxRow == 0 || maxColumn == 0) return new IXLRange[0];
 
             var rowRanges = new List<StartEnd>();
@@ -285,21 +307,32 @@ namespace Excel.Report.PDF
             return list.ToArray();
         }
 
-        static void GetSheetMaxRowCol(IXLWorksheet ws, out int maxRow, out int maxColumn)
+        static void GetSheetMaxRowCol(WorksheetPart worksheetPart, out int maxRow, out int maxColumn)
         {
-            maxRow = 0;
-            maxColumn = 0;
-            foreach (var cell in ws.Cells())
+            var reference = worksheetPart.Worksheet.SheetDimension?.Reference?.Value;
+            if (reference == null) throw new InvalidDataException("Invalid SheetDimension");
+            var referenceParts = reference.Split(':');
+            if (referenceParts.Length < 2) throw new InvalidDataException("Invalid SheetDimension");
+            string endReference = referenceParts[1];
+            maxRow = GetRowIndex(endReference);
+            maxColumn = GetColumnIndex(endReference);
+        }
+
+        static int GetRowIndex(string cellReference)
+            => int.Parse(new string(cellReference.Where(char.IsDigit).ToArray()));
+
+        static int GetColumnIndex(string cellReference)
+        {
+            string columnName = new string(cellReference.Where(char.IsLetter).ToArray());
+            int columnNumber = 0;
+            int mulitplier = 1;
+
+            foreach (char c in columnName.ToUpper().Reverse())
             {
-                if (!string.IsNullOrEmpty(cell.GetString()) ||
-                    cell.Style != ws.Workbook.Style ||
-                    cell.HasComment ||
-                    cell.HasDataValidation)
-                {
-                    maxRow = Math.Max(maxRow, cell.Address.RowNumber);
-                    maxColumn = Math.Max(maxColumn, cell.Address.ColumnNumber);
-                }
+                columnNumber += mulitplier * ((c - 'A') + 1);
+                mulitplier *= 26;
             }
+            return columnNumber;
         }
 
         internal static double PixelToPoint(double src)

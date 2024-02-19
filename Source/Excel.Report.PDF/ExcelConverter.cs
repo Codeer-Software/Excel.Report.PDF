@@ -6,6 +6,9 @@ namespace Excel.Report.PDF
 {
     public class ExcelConverter : IDisposable
     {
+        public static int MaxRow = 2000;
+        public static int MaxColumn = 256;
+
         public static MemoryStream ConvertToPdf(string filePath, int sheetPosition)
         {
             using (var converter = new ExcelConverter(filePath))
