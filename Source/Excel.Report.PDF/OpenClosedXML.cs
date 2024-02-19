@@ -312,8 +312,9 @@ namespace Excel.Report.PDF
             var reference = worksheetPart.Worksheet.SheetDimension?.Reference?.Value;
             if (reference == null) throw new InvalidDataException("Invalid SheetDimension");
             var referenceParts = reference.Split(':');
-            if (referenceParts.Length < 2) throw new InvalidDataException("Invalid SheetDimension");
-            string endReference = referenceParts[1];
+            var endReference = referenceParts.Length == 2 ? referenceParts[1]:
+                referenceParts.Length == 1?  referenceParts[0] : null;
+            if (endReference == null) throw new InvalidDataException("Invalid SheetDimension");
             maxRow = GetRowIndex(endReference);
             maxColumn = GetColumnIndex(endReference);
         }
@@ -323,7 +324,7 @@ namespace Excel.Report.PDF
 
         static int GetColumnIndex(string cellReference)
         {
-            string columnName = new string(cellReference.Where(char.IsLetter).ToArray());
+            var columnName = new string(cellReference.Where(char.IsLetter).ToArray());
             int columnNumber = 0;
             int mulitplier = 1;
 

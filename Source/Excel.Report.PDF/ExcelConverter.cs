@@ -207,7 +207,25 @@ namespace Excel.Report.PDF
             var offset = CellPadding * scaling;
             if (offset * 2 < w) w = w - offset * 2;
             if (offset * 2 < h) h = h - offset * 2;
-            gfx.DrawString(text, font, new XSolidBrush(xFontColor), new XRect(cellInfo.X + offset, cellInfo.Y + offset, w, h), format);
+
+            var lines = text.Split(new[] { "\r\n", "\n" }, StringSplitOptions.None);
+            var xRect = new XRect(cellInfo.X + offset, cellInfo.Y + offset, w, h);
+
+            var startY = xRect.Y;
+            if (format.LineAlignment == XLineAlignment.Center)
+            {
+                startY += (h - lines.Length * font.Height) / 2;
+            }
+            else if (format.LineAlignment == XLineAlignment.Far)
+            {
+                startY += h - lines.Length * font.Height;
+            }
+
+            foreach (var line in lines)
+            {
+                gfx.DrawString(line, font, new XSolidBrush(xFontColor), new XRect(xRect.X, startY, w, font.Height), format);
+                startY += font.Height;
+            }
         }
 
         static void DrawPictures(XGraphics gfx, CellInfo cellInfo)
