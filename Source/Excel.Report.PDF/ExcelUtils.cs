@@ -7,8 +7,23 @@ namespace Excel.Report.PDF
         public static List<List<string>> ReadAllTexts(this IXLWorksheet sheet)
             => sheet.ReadAll((row, col) => sheet.GetText(row, col).Trim(), string.Empty);
 
+        public static async Task<List<List<string>>> ReadAllTextsFromExcelBinary(Stream excel)
+        {
+            List<List<string>> texts = new();
+            using (var memoryStream = new MemoryStream())
+            {
+                await excel.CopyToAsync(memoryStream);
+                memoryStream.Position = 0;
+                using (var book = new XLWorkbook(memoryStream))
+                {
+                    texts = book.Worksheet(1).ReadAllTexts();
+                }
+            }
+            return texts;
+        }
+
         public static List<List<object?>> ReadAllObjects(this IXLWorksheet sheet)
-             => sheet.ReadAll((row, col) => sheet.GetValue(row, col), null);
+                 => sheet.ReadAll((row, col) => sheet.GetValue(row, col), null);
 
         public static MemoryStream CreateExcelBinary(List<List<string>> allTexts, string sheetName)
             => CreateExcelBinary(allTexts, sheetName, (cell, value) => { cell.SetValue(value).Style.NumberFormat.Format = "@"; });
