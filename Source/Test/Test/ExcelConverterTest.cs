@@ -41,6 +41,9 @@ namespace Test
         [Test]
         public void Test8() => Convert("Test8");
 
+        [Test]
+        public void Test9() => Convert("Test9");
+
         public void Convert(string name)
         {
             var workbookPath = Path.Combine(TestEnvironment.PdfSrcPath, $"{name}.xlsx");

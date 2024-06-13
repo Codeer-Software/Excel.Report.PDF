@@ -1,6 +1,7 @@
 ﻿using ClosedXML.Excel;
 using PdfSharp.Drawing;
 using PdfSharp.Pdf;
+using static ClosedXML.Excel.XLPredefinedFormat;
 
 namespace Excel.Report.PDF
 {
@@ -197,7 +198,19 @@ namespace Excel.Report.PDF
                     format.Alignment = XStringAlignment.Far;
                     break;
                 default:
-                    format.Alignment = XStringAlignment.Near;
+                    switch (cell.DataType)
+                    {
+                        case XLDataType.Number:
+                        case XLDataType.DateTime:
+                            format.Alignment = XStringAlignment.Far;
+                            break;
+                        case XLDataType.Boolean:
+                            format.Alignment = XStringAlignment.Center;
+                            break;
+                        default:
+                            format.Alignment = XStringAlignment.Near;
+                            break;
+                    }
                     break;
             }
             switch (cell.Style.Alignment.Vertical)
