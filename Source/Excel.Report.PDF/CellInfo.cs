@@ -5,6 +5,7 @@ namespace Excel.Report.PDF
     class CellInfo
     {
         internal CellInfo? MeargedTopCell { get; set; }
+        internal CellInfo? MeargedLastCell { get; set; }
         internal string Text { get; set; } = string.Empty;
 
         internal string BackColor { get; set; } = string.Empty;

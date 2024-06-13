@@ -416,8 +416,10 @@ namespace Excel.Report.PDF
             var infos = allCells.SelectMany(e => e);
             foreach (var range in mergedRanges)
             {
-                var id = range.FirstCell().Address.UniqueId;
-                var firstInfo = infos.FirstOrDefault(e => e.Cell?.Address.UniqueId == id);
+                var firstCellId = range.FirstCell().Address.UniqueId;
+                var lastCellId = range.LastCell().Address.UniqueId;
+                var firstInfo = infos.FirstOrDefault(e => e.Cell?.Address.UniqueId == firstCellId);
+                var lastInfo = infos.FirstOrDefault(e => e.Cell?.Address.UniqueId == lastCellId);
                 if (firstInfo == null) continue;
                 double w = 0, h = 0;
                 bool getW = true;
@@ -440,9 +442,10 @@ namespace Excel.Report.PDF
                 {
                     foreach (var cell in row.Cells())
                     {
-                        var mearged = infos.FirstOrDefault(e => e.Cell?.Address.UniqueId == cell.Address.UniqueId);
-                        if (mearged == null) continue;
-                        mearged.MeargedTopCell = firstInfo;
+                        var merged = infos.FirstOrDefault(e => e.Cell?.Address.UniqueId == cell.Address.UniqueId);
+                        if (merged == null) continue;
+                        merged.MeargedTopCell = firstInfo;
+                        merged.MeargedLastCell = lastInfo;
                     }
                 }
             }

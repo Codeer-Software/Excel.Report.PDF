@@ -140,19 +140,43 @@ namespace Excel.Report.PDF
         {
             var cell = cellInfo.Cell!;
 
-            if (cell.Style.Border.TopBorder != XLBorderStyleValues.None)
+            static bool IsDrawTop(CellInfo cellInfo)
+            {
+                if (cellInfo.MeargedTopCell == null) return true;
+                return cellInfo.Cell?.Address.RowNumber == cellInfo.MeargedTopCell.Cell?.Address.RowNumber;
+            }
+
+            static bool IsDrawLeft(CellInfo cellInfo)
+            {
+                if (cellInfo.MeargedTopCell == null) return true;
+                return cellInfo.Cell?.Address.ColumnNumber == cellInfo.MeargedTopCell.Cell?.Address.ColumnNumber;
+            }
+
+            static bool IsDrawBottom(CellInfo cellInfo)
+            {
+                if (cellInfo.MeargedLastCell == null) return true;
+                return cellInfo.Cell?.Address.RowNumber == cellInfo.MeargedLastCell.Cell?.Address.RowNumber;
+            }
+
+            static bool IsDrawRight(CellInfo cellInfo)
+            {
+                if (cellInfo.MeargedLastCell == null) return true;
+                return cellInfo.Cell?.Address.ColumnNumber == cellInfo.MeargedLastCell.Cell?.Address.ColumnNumber;
+            }
+
+            if (cell.Style.Border.TopBorder != XLBorderStyleValues.None && IsDrawTop(cellInfo))
             {
                 gfx.DrawLine(_openClosedXML.ConvertToXPen(cell.Style.Border.TopBorder, cell.Style.Border.TopBorderColor, scaling), cellInfo.X, cellInfo.Y, cellInfo.X + cellInfo.Width, cellInfo.Y);
             }
-            if (cell.Style.Border.RightBorder != XLBorderStyleValues.None)
+            if (cell.Style.Border.RightBorder != XLBorderStyleValues.None && IsDrawRight(cellInfo))
             {
                 gfx.DrawLine(_openClosedXML.ConvertToXPen(cell.Style.Border.RightBorder, cell.Style.Border.RightBorderColor, scaling), cellInfo.X + cellInfo.Width, cellInfo.Y, cellInfo.X + cellInfo.Width, cellInfo.Y + cellInfo.Height);
             }
-            if (cell.Style.Border.BottomBorder != XLBorderStyleValues.None)
+            if (cell.Style.Border.BottomBorder != XLBorderStyleValues.None && IsDrawBottom(cellInfo))
             {
                 gfx.DrawLine(_openClosedXML.ConvertToXPen(cell.Style.Border.BottomBorder, cell.Style.Border.BottomBorderColor, scaling), cellInfo.X + cellInfo.Width, cellInfo.Y + cellInfo.Height, cellInfo.X, cellInfo.Y + cellInfo.Height);
             }
-            if (cell.Style.Border.LeftBorder != XLBorderStyleValues.None)
+            if (cell.Style.Border.LeftBorder != XLBorderStyleValues.None && IsDrawLeft(cellInfo))
             {
                 gfx.DrawLine(_openClosedXML.ConvertToXPen(cell.Style.Border.LeftBorder, cell.Style.Border.LeftBorderColor, scaling), cellInfo.X, cellInfo.Y + cellInfo.Height, cellInfo.X, cellInfo.Y);
             }
