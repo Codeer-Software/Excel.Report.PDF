@@ -110,7 +110,7 @@ namespace Excel.Report.PDF
         void FillCellBackColor(XGraphics gfx, CellInfo cellInfo)
         {
             var cell = cellInfo.Cell!;
-            if (cellInfo.MeargedTopCell != null) cell = cellInfo.MeargedTopCell.Cell!;
+            if (cellInfo.MergedFirstCell != null) cell = cellInfo.MergedFirstCell.Cell!;
 
             var xBackColor = _openClosedXML.ChangeColor(cell.Style.Fill.BackgroundColor);
             if (xBackColor != null)
@@ -142,26 +142,26 @@ namespace Excel.Report.PDF
 
             static bool IsDrawTop(CellInfo cellInfo)
             {
-                if (cellInfo.MeargedTopCell == null) return true;
-                return cellInfo.Cell?.Address.RowNumber == cellInfo.MeargedTopCell.Cell?.Address.RowNumber;
+                if (cellInfo.MergedFirstCell == null) return true;
+                return cellInfo.Cell?.Address.RowNumber == cellInfo.MergedFirstCell.Cell?.Address.RowNumber;
             }
 
             static bool IsDrawLeft(CellInfo cellInfo)
             {
-                if (cellInfo.MeargedTopCell == null) return true;
-                return cellInfo.Cell?.Address.ColumnNumber == cellInfo.MeargedTopCell.Cell?.Address.ColumnNumber;
+                if (cellInfo.MergedFirstCell == null) return true;
+                return cellInfo.Cell?.Address.ColumnNumber == cellInfo.MergedFirstCell.Cell?.Address.ColumnNumber;
             }
 
             static bool IsDrawBottom(CellInfo cellInfo)
             {
-                if (cellInfo.MeargedLastCell == null) return true;
-                return cellInfo.Cell?.Address.RowNumber == cellInfo.MeargedLastCell.Cell?.Address.RowNumber;
+                if (cellInfo.MergedLastCell == null) return true;
+                return cellInfo.Cell?.Address.RowNumber == cellInfo.MergedLastCell.Cell?.Address.RowNumber;
             }
 
             static bool IsDrawRight(CellInfo cellInfo)
             {
-                if (cellInfo.MeargedLastCell == null) return true;
-                return cellInfo.Cell?.Address.ColumnNumber == cellInfo.MeargedLastCell.Cell?.Address.ColumnNumber;
+                if (cellInfo.MergedLastCell == null) return true;
+                return cellInfo.Cell?.Address.ColumnNumber == cellInfo.MergedLastCell.Cell?.Address.ColumnNumber;
             }
 
             if (cell.Style.Border.TopBorder != XLBorderStyleValues.None && IsDrawTop(cellInfo))

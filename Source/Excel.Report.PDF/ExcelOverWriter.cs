@@ -77,10 +77,10 @@ namespace Excel.Report.PDF
             }
         }
 
-        static void SetCellData(IXLWorksheet sheet, int rowIndex, int cellindex, ExcelOverWriteCell? cellData)
+        static void SetCellData(IXLWorksheet sheet, int rowIndex, int cellIndex, ExcelOverWriteCell? cellData)
         {
             if (cellData == null) return;
-            var cell = sheet.Cell(rowIndex, cellindex);
+            var cell = sheet.Cell(rowIndex, cellIndex);
             cell.SetValue(XLCellValue.FromObject(cellData.Value));
         }
 
