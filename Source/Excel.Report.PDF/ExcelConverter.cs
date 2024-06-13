@@ -235,7 +235,7 @@ namespace Excel.Report.PDF
                 var xImage = XImage.FromStream(pictureInfo.Picture!);
                 gfx.DrawImage(xImage,
                 cellInfo.X + pictureInfo.X,
-                    cellInfo.Y + pictureInfo.X,
+                    cellInfo.Y + pictureInfo.Y,
                     pictureInfo.Width,
                     pictureInfo.Height);
             }
