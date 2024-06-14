@@ -5,7 +5,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
-    <Version>0.9.0</Version>
+    <Version>0.10.0</Version>
     <Description>You can convert Excel to PDF.</Description>
     <PackageProjectUrl>https://github.com/Codeer-Software/Excel.Report.PDF</PackageProjectUrl>
     <RepositoryUrl>https://github.com/Codeer-Software/Excel.Report.PDF</RepositoryUrl>
@@ -14,9 +14,7 @@
     <PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
 	<PackageReleaseNotes>
 		# Bug fixes
-		- Fixed a bug where images were drawn in an incorrect position.
-		- Fixed a bug where the inner borders of merged cells were drawn.
-		- Supports default alignment for each type.
+		- Image order support.
 	</PackageReleaseNotes>
   </PropertyGroup>
 

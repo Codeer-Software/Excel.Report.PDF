@@ -1,8 +1,6 @@
 ﻿using ClosedXML.Excel;
 using PdfSharp.Drawing;
 using PdfSharp.Pdf;
-using static ClosedXML.Excel.XLPredefinedFormat;
-
 namespace Excel.Report.PDF
 {
     public class ExcelConverter : IDisposable
@@ -97,9 +95,18 @@ namespace Excel.Report.PDF
                 {
                     DrawCellText(gfx, scaling, cellInfo);
                 }
+
+                var pictureInfoAndCellInfo = new List<PictureInfoAndCellInfo>();
                 foreach (var cellInfo in allCells[i])
                 {
-                    DrawPictures(gfx, cellInfo);
+                    foreach(var e in cellInfo.Pictures)
+                    {
+                        pictureInfoAndCellInfo.Add(new PictureInfoAndCellInfo(e, cellInfo));
+                    }
+                }
+                foreach (var e in pictureInfoAndCellInfo.OrderBy(e => e.PictureInfo.Index))
+                {
+                    DrawPictures(gfx, e);
                 }
             }
 
@@ -265,17 +272,25 @@ namespace Excel.Report.PDF
             }
         }
 
-        static void DrawPictures(XGraphics gfx, CellInfo cellInfo)
+        class PictureInfoAndCellInfo
         {
-            foreach (var pictureInfo in cellInfo.Pictures)
+            public PictureInfo PictureInfo { get; set; }
+            public CellInfo CellInfo { get; set; }
+            public PictureInfoAndCellInfo(PictureInfo pictureInfo, CellInfo cellInfo)
             {
-                var xImage = XImage.FromStream(pictureInfo.Picture!);
-                gfx.DrawImage(xImage,
-                cellInfo.X + pictureInfo.X,
-                    cellInfo.Y + pictureInfo.Y,
-                    pictureInfo.Width,
-                    pictureInfo.Height);
+                PictureInfo = pictureInfo;
+                CellInfo = cellInfo;
             }
+        }
+
+        static void DrawPictures(XGraphics gfx, PictureInfoAndCellInfo item)
+        {
+            var xImage = XImage.FromStream(item.PictureInfo.Picture!);
+            gfx.DrawImage(xImage,
+            item.CellInfo.X + item.PictureInfo.X,
+                item.CellInfo.Y + item.PictureInfo.Y,
+                item.PictureInfo.Width,
+                item.PictureInfo.Height);
         }
     }
 }

@@ -352,6 +352,8 @@ namespace Excel.Report.PDF
             IXLPageSetup pageSetup, double pdfWidthSrc, double pdfHeightSrc,
             IXLRange[] ranges, IXLRange[] mergedRanges, IXLPicture[] pictures, out double scaling)
         {
+            var indexAndPictures = pictures.Select((Picture, Index) => new { Picture, Index }).ToList();
+
             scaling = ((double)pageSetup.Scale) / 100;
 
             var allCells = new List<List<CellInfo>>();
@@ -386,16 +388,17 @@ namespace Excel.Report.PDF
                         };
 
                         //Add Picture to Cell
-                        foreach (var picture in pictures.Where(e => e.TopLeftCell.Address.UniqueId == cell.Address.UniqueId))
+                        foreach (var e in indexAndPictures.Where(e => e.Picture.TopLeftCell.Address.UniqueId == cell.Address.UniqueId))
                         {
-                            picture!.ImageStream.Position = 0;
+                            e.Picture.ImageStream.Position = 0;
                             info.Pictures.Add(new()
                             {
-                                Picture = picture!.ImageStream,
-                                X = PixelToPoint(picture.Left) * scaling,
-                                Y = PixelToPoint(picture.Top) * scaling,
-                                Width = PixelToPoint(picture.Width) * scaling,
-                                Height = PixelToPoint(picture.Height) * scaling
+                                Picture = e.Picture.ImageStream,
+                                Index = e.Index,
+                                X = PixelToPoint(e.Picture.Left) * scaling,
+                                Y = PixelToPoint(e.Picture.Top) * scaling,
+                                Width = PixelToPoint(e.Picture.Width) * scaling,
+                                Height = PixelToPoint(e.Picture.Height) * scaling
                             });
                         }
 
