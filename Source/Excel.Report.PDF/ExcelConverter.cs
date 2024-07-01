@@ -54,7 +54,7 @@ namespace Excel.Report.PDF
         {
             using (var pdf = new PdfDocument())
             {
-                var page = pdf.AddPage();
+                var page = pdf.AddPageEx();
                 if (_openClosedXML.IsLandscape(sheetPosition)) page.Orientation = PdfSharp.PageOrientation.Landscape;
                 var allCells = _openClosedXML.GetCellInfo(sheetPosition, page.Width.Point, page.Height.Point, out var scaling);
                 return DrawPdf(pdf, page, allCells, scaling);
@@ -65,7 +65,7 @@ namespace Excel.Report.PDF
         {
             using (var pdf = new PdfDocument())
             {
-                var page = pdf.AddPage();
+                var page = pdf.AddPageEx();
                 if (_openClosedXML.IsLandscape(sheetName)) page.Orientation = PdfSharp.PageOrientation.Landscape;
                 var allCells = _openClosedXML.GetCellInfo(sheetName, page.Width.Point, page.Height.Point, out var scaling);
                 return DrawPdf(pdf, page, allCells, scaling);
@@ -77,7 +77,7 @@ namespace Excel.Report.PDF
             PdfPage? page = pageSrc;
             for (int i = 0; i < allCells.Count; i++)
             {
-                if (page == null) page = pdf.AddPage();
+                if (page == null) page = pdf.AddPageEx();
                 using var gfx = XGraphics.FromPdfPage(page);
                 page = null;
                 var drawLineCache = new DrawLineCache(gfx);
