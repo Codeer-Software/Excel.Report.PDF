@@ -5,63 +5,84 @@ namespace Excel.Report.PDF
 {
     public static class ExcelOverWriter
     {
-        public static async Task OverWrite(this IXLWorksheet sheet, IExcelSymbolConverter converter)
+        private static async Task<int> OverWrite(IXLWorksheet sheet, int startRow, int endRow, int colCount, IExcelSymbolConverter converter)
         {
-            ExcelUtils.GetRowColCount(sheet, out var rowCount, out var colCount);
-            for (var i = 0; i < rowCount; i++)
+            for (int i = startRow; i <= endRow;)
             {
-                var rowIndex = i + 1;
 
-                var leftCell = sheet.GetText(rowIndex, 1).Trim();
+                await OverWriteCell(sheet, i, colCount, async t => await converter.GetData(t));
 
-                if (leftCell.StartsWith("#LoopRow"))
+                // Get the string in column A of row i
+                var leftCell = sheet.GetText(i, 1).Trim();
+                if (!leftCell.StartsWith("#LoopRow"))
                 {
-                    // #LoopRow($list, i, rowCopyCount)
-                    var args = leftCell.Replace("#LoopRow", "").Replace("(", "").Replace(")", "").Split(',').Select(e=>e.Trim()).ToArray();
-
-                    // rowCopyCount is optional
-                    var rowCopyCount = 1;
-                    if (args.Length == 3)
-                    {
-                        if (!int.TryParse(args[2], out rowCopyCount)) continue;
-                    }
-
-                    // #list and i(enumerable name) are must
-                    if (args.Length < 2) continue;
-
-                    if (!args[0].StartsWith("$")) continue;
-                    var enumerable = (await converter.GetData(args[0].Substring(1)))?.Value as IEnumerable;
-                    if (enumerable == null) continue;
-
-                    var list = enumerable.OfType<object?>().ToList();
-                    var enumerableName = args[1];
-
-                    // delete #LoopRow
-                    var cell = sheet.Cell(rowIndex, 1);
-                    cell.SetValue(XLCellValue.FromObject(null));
-
-                    // copy rows
-                    CopyRows(sheet, rowIndex, rowCopyCount, list.Count);
-
-                    // over write
-                    foreach (var e in list)
-                    {
-                        for (int j = 0; j < rowCopyCount; j++)
-                        {
-                            await OverWriteCell(sheet, rowIndex, colCount, async t => await converter.GetData(e, enumerableName, t));
-                            rowIndex++;
-                        }
-                    }
-
-                    var addRowCount = (list.Count - 1) * rowCopyCount;
-                    rowCount += addRowCount;
-                    i += addRowCount;
+                    i++;
+                    continue;
                 }
-                else
+
+                // #LoopRow($list, i, rowCopyCount)
+                var args = leftCell.Replace("#LoopRow", "").Replace("(", "").Replace(")", "").Split(',').Select(e => e.Trim()).ToArray();
+
+                // rowCopyCount is optional
+                var rowCopyCount = 1;
+                if (args.Length == 3)
                 {
-                    await OverWriteCell(sheet, rowIndex, colCount, async t => await converter.GetData(t));
+                    if (!int.TryParse(args[2], out rowCopyCount)) continue;
+                }
+
+                // #list and i(enumerable name) are must
+                if (args.Length < 2) continue;
+
+                if (!args[0].StartsWith("$")) continue;
+
+                var enumerable = (await converter.GetData(args[0].Substring(1)))?.Value as IEnumerable;
+                if (enumerable == null) continue;
+
+                var list = enumerable.OfType<object?>().ToList();
+                //var enumerableName = args[1];
+
+                // delete #LoopRow
+                var cell = sheet.Cell(i, 1);
+                cell.SetValue(XLCellValue.FromObject(null));
+
+                // copy rows
+                CopyRows(sheet, i, rowCopyCount, list.Count);
+
+                // over write
+                bool first = true;
+                foreach (var e in list)
+                {
+                    var elementConverter = converter.CreateChildExcelSymbolConverter(e, args[1]);
+
+                    // Recursive Processing
+                    var processedRows = await OverWrite(sheet, i, i + rowCopyCount - 1, colCount, elementConverter);
+                    i += processedRows;
+
+                    if (first)
+                    {
+                        first = false;
+
+                        // Subtract duplicate rows from the processed rows
+                        endRow += (processedRows - rowCopyCount);
+                    }
+                    else
+                    {
+                        endRow += processedRows;
+                    }
                 }
             }
+            // Processed Rows
+            return endRow - startRow + 1;
+        }
+
+        public static async Task OverWrite(this IXLWorksheet sheet, IExcelSymbolConverter converter)
+        {
+            await Task.CompletedTask;
+
+            // Get all rows and columns of the sheet
+            ExcelUtils.GetRowColCount(sheet, out var rowCount, out var colCount);
+
+            await OverWrite(sheet, 1, rowCount, colCount, converter);
         }
 
         static async Task OverWriteCell(IXLWorksheet sheet, int rowIndex, int colCount, Func<string, Task<ExcelOverWriteCell?>> converter)
@@ -72,13 +93,14 @@ namespace Excel.Report.PDF
                 var text = sheet.GetText(rowIndex, cellIndex).Trim();
                 if (text.StartsWith("$"))
                 {
-                    SetCellData(sheet, rowIndex, cellIndex, await converter(text.Substring(1)));
+                    var x = await converter(text.Substring(1));
+                    SetCellData(sheet, rowIndex, cellIndex, x);
                 }
             }
         }
 
         static void SetCellData(IXLWorksheet sheet, int rowIndex, int cellIndex, ExcelOverWriteCell? cellData)
-        {
+        { 
             if (cellData == null) return;
             var cell = sheet.Cell(rowIndex, cellIndex);
             cell.SetValue(XLCellValue.FromObject(cellData.Value));

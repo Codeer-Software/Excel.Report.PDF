@@ -2,7 +2,7 @@
 {
     public interface IExcelSymbolConverter
     {
+        IExcelSymbolConverter CreateChildExcelSymbolConverter(object? obj, string name);
         Task<ExcelOverWriteCell?> GetData(string symbol);
-        Task<ExcelOverWriteCell?> GetData(object? element, string elementName, string symbol);
     }
 }
