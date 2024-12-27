@@ -48,7 +48,7 @@ namespace Excel.Report.PDF
                 CopyRows(sheet, i, rowCopyCount, list.Count);
 
                 // over write
-                bool first = true;
+                bool isFirstLoop = true;
                 foreach (var e in list)
                 {
                     var elementConverter = converter.CreateChildExcelSymbolConverter(e, args[1]);
@@ -57,17 +57,8 @@ namespace Excel.Report.PDF
                     var processedRows = await OverWrite(sheet, i, i + rowCopyCount - 1, colCount, elementConverter);
                     i += processedRows;
 
-                    if (first)
-                    {
-                        first = false;
-
-                        // Subtract duplicate rows from the processed rows
-                        endRow += (processedRows - rowCopyCount);
-                    }
-                    else
-                    {
-                        endRow += processedRows;
-                    }
+                    // Increment endRow
+                    (isFirstLoop, endRow) = IncrementEndRow(isFirstLoop, endRow, processedRows, rowCopyCount);
                 }
             }
             // Processed Rows
@@ -127,5 +118,23 @@ namespace Excel.Report.PDF
                 }
             }
         }
+
+        static (bool, int) IncrementEndRow(bool isFirstLoop, int endRow, int processedRows, int rowCopyCount)
+        {
+            if (isFirstLoop)
+            {
+                isFirstLoop = false;
+
+                // Subtract duplicate rows from the processed rows
+                endRow += (processedRows - rowCopyCount);
+            }
+            else
+            {
+                endRow += processedRows;
+            }
+
+            return (isFirstLoop,endRow);
+        }
+
     }
 }
