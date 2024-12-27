@@ -101,24 +101,24 @@ namespace Test
 
                 var sheet = book.Worksheets.First();
 
-                // B4:Loopと関係ない部分、一番最初にデータが入るところ
+                // B4:The part unrelated to the loop, The point where data is initially stored
                 var noLoopFirstData = sheet.Cell(4, 2).Value.GetText();
                 noLoopFirstData.Is("エクセルコンサルティング株式会社");
 
-                // B18:Loopの1行目、データをそのまま出力
+                // B18:The first line of the loop, Verify if the data is output as it is.
                 var firstLoopData = sheet.Cell(18, 2).Value.GetText();
                 firstLoopData.Is("鯛");
 
-                // V21:Loopの最後、計算した値が入っているか確認
+                // V21:The last loop, Check if the total value is stored
                 var lastLoopSubtractData = sheet.Cell(21, 22).Value.GetNumber().ToString();
                 lastLoopSubtractData.Is("39000");
 
-                // V26:最後の行、合計が合っているか確認
+                // V26:The last line, Check if the sum of each row and the tax is stored
                 var lastData = sheet.Cell(26, 22).Value.GetNumber().ToString();
                 lastData.Is("106700");
 
 
-                // R14:セル結合を行っている、V26の値と同じか
+                // R14:Merging cells, Check if it is the same as the value in V26
                 var total = sheet.Cell(14, 18).Value.GetNumber().ToString();
                 total.Is("106700");
 
@@ -162,6 +162,12 @@ namespace Test
             {
                 await book.Worksheet(1).OverWrite(new ObjectExcelSymbolConverter(data));
                 book.SaveAs(Path.Combine(TestEnvironment.TestResultsPath, "RecursiveLoopTest(NoLoop).xlsx"));
+
+                var sheet = book.Worksheets.First();
+
+                // B1:the part unrelated to the loop, verify if the data is output as it is.
+                var noLoopData = sheet.Cell(1, 2).Value.GetText();
+                noLoopData.Is("NameA");
             }
 
             using var outStream = ExcelConverter.ConvertToPdf(Path.Combine(TestEnvironment.TestResultsPath, "RecursiveLoopTest(NoLoop).xlsx"), 1);
@@ -203,6 +209,20 @@ namespace Test
             {
                 await book.Worksheet(1).OverWrite(new ObjectExcelSymbolConverter(data));
                 book.SaveAs(Path.Combine(TestEnvironment.TestResultsPath, "RecursiveLoopTest(1Loop).xlsx"));
+
+                var sheet = book.Worksheets.First();
+
+                // B1:the part unrelated to the loop, verify if the data is output as it is.
+                var noLoopData = sheet.Cell(1, 2).Value.GetText();
+                noLoopData.Is("NameA");
+
+                // B2:The first line of the loop, verify if the data is output as it is.
+                var firstLoopData = sheet.Cell(2, 2).Value.GetText();
+                firstLoopData.Is("テキスト1");
+
+                // B3:The last line of the loop, verify if the data is output as it is.
+                var lastLoopData = sheet.Cell(3, 2).Value.GetText();
+                lastLoopData.Is("テキスト2");
             }
 
             using var outStream = ExcelConverter.ConvertToPdf(Path.Combine(TestEnvironment.TestResultsPath, "RecursiveLoopTest(1Loop).xlsx"), 1);
@@ -245,6 +265,36 @@ namespace Test
             {
                 await book.Worksheet(1).OverWrite(new ObjectExcelSymbolConverter(data));
                 book.SaveAs(Path.Combine(TestEnvironment.TestResultsPath, "RecursiveLoopTest(2Loop).xlsx"));
+
+                var sheet = book.Worksheets.First();
+
+                // B1:the part unrelated to the loop, verify if the data is output as it is.
+                var noLoopData = sheet.Cell(1, 2).Value.GetText();
+                noLoopData.Is("NameA");
+
+                // B2:The first iteration of Loop1, verify if the value is stored as it is.
+                var firstIterationLoop1Data = sheet.Cell(2, 2).Value.GetText();
+                firstIterationLoop1Data.Is("テキスト1");
+
+                // B3:The first iteration of Loop2 within the first iteration of Loop1, verify if the value is stored as it is.
+                var firstLoop2DatawithinFirstLoop1 = sheet.Cell(3, 2).Value.GetNumber().ToString();
+                firstLoop2DatawithinFirstLoop1.Is("1");
+
+                // B5:The last iteration of Loop2 within the first iteration of Loop1, verify if the value is stored as it is.
+                var lastLoop2DatawithinFirstLoop1 = sheet.Cell(5, 2).Value.GetNumber().ToString();
+                lastLoop2DatawithinFirstLoop1.Is("3");
+
+                // B6:The last iteration of Loop1, verify if the value is stored as it is.
+                var lastIterationLoop1Data = sheet.Cell(6, 2).Value.GetText();
+                lastIterationLoop1Data.Is("テキスト2");
+
+                // B7:The first iteration of Loop2 within the last iteration of Loop1, verify if the value is stored as it is.
+                var firstLoop2DatawithinLastLoop1 = sheet.Cell(7, 2).Value.GetNumber().ToString();
+                firstLoop2DatawithinLastLoop1.Is("11");
+
+                // B9:The last iteration of Loop2 within the last iteration of Loop1, verify if the value is stored as it is.
+                var lastLoop2DatawithinLastLoop1 = sheet.Cell(9, 2).Value.GetNumber().ToString();
+                lastLoop2DatawithinLastLoop1.Is("33");
             }
 
             using var outStream = ExcelConverter.ConvertToPdf(Path.Combine(TestEnvironment.TestResultsPath, "RecursiveLoopTest(2Loop).xlsx"), 1);

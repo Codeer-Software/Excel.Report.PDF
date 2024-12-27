@@ -39,7 +39,6 @@ namespace Excel.Report.PDF
                 if (enumerable == null) continue;
 
                 var list = enumerable.OfType<object?>().ToList();
-                //var enumerableName = args[1];
 
                 // delete #LoopRow
                 var cell = sheet.Cell(i, 1);
