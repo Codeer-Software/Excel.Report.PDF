@@ -5,6 +5,15 @@ namespace Excel.Report.PDF
 {
     public static class ExcelOverWriter
     {
+        public static async Task OverWrite(this IXLWorksheet sheet, IExcelSymbolConverter converter)
+        {
+            await Task.CompletedTask;
+
+            // Get all rows and columns of the sheet
+            ExcelUtils.GetRowColCount(sheet, out var rowCount, out var colCount);
+
+            await OverWrite(sheet, 1, rowCount, colCount, converter);
+        }
         private static async Task<int> OverWrite(IXLWorksheet sheet, int startRow, int endRow, int colCount, IExcelSymbolConverter converter)
         {
             for (int i = startRow; i <= endRow;)
@@ -63,16 +72,6 @@ namespace Excel.Report.PDF
             }
             // Processed Rows
             return endRow - startRow + 1;
-        }
-
-        public static async Task OverWrite(this IXLWorksheet sheet, IExcelSymbolConverter converter)
-        {
-            await Task.CompletedTask;
-
-            // Get all rows and columns of the sheet
-            ExcelUtils.GetRowColCount(sheet, out var rowCount, out var colCount);
-
-            await OverWrite(sheet, 1, rowCount, colCount, converter);
         }
 
         static async Task OverWriteCell(IXLWorksheet sheet, int rowIndex, int colCount, Func<string, Task<ExcelOverWriteCell?>> converter)
