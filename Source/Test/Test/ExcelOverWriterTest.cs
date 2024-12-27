@@ -138,7 +138,7 @@ namespace Test
 
             var loop1_1 = new Loop1
             {
-                Text = "テキスト1"
+                Text = "Test1"
             };
 
             loop1_1.Loop2.Add(new Loop2 { Id = 1 });
@@ -147,7 +147,7 @@ namespace Test
 
             var loop1_2 = new Loop1
             {
-                Text = "テキスト2"
+                Text = "Test2"
             };
 
             loop1_2.Loop2.Add(new Loop2 { Id = 11 });
@@ -185,7 +185,7 @@ namespace Test
 
             var loop1_1 = new Loop1
             {
-                Text = "テキスト1"
+                Text = "Test1"
             };
 
             loop1_1.Loop2.Add(new Loop2 { Id = 1 });
@@ -194,7 +194,7 @@ namespace Test
 
             var loop1_2 = new Loop1
             {
-                Text = "テキスト2"
+                Text = "Test2"
             };
 
             loop1_2.Loop2.Add(new Loop2 { Id = 11 });
@@ -218,11 +218,11 @@ namespace Test
 
                 // B2:The first line of the loop, verify if the data is output as it is.
                 var firstLoopData = sheet.Cell(2, 2).Value.GetText();
-                firstLoopData.Is("テキスト1");
+                firstLoopData.Is("Test1");
 
                 // B3:The last line of the loop, verify if the data is output as it is.
                 var lastLoopData = sheet.Cell(3, 2).Value.GetText();
-                lastLoopData.Is("テキスト2");
+                lastLoopData.Is("Test2");
             }
 
             using var outStream = ExcelConverter.ConvertToPdf(Path.Combine(TestEnvironment.TestResultsPath, "RecursiveLoopTest(1Loop).xlsx"), 1);
@@ -241,7 +241,7 @@ namespace Test
 
             var loop1_1 = new Loop1
             {
-                Text = "テキスト1"
+                Text = "Test1"
             };
 
             loop1_1.Loop2.Add(new Loop2 { Id = 1 });
@@ -250,7 +250,7 @@ namespace Test
 
             var loop1_2 = new Loop1
             {
-                Text = "テキスト2"
+                Text = "Test2"
             };
 
             loop1_2.Loop2.Add(new Loop2 { Id = 11 });
@@ -274,7 +274,7 @@ namespace Test
 
                 // B2:The first iteration of Loop1, verify if the value is stored as it is.
                 var firstIterationLoop1Data = sheet.Cell(2, 2).Value.GetText();
-                firstIterationLoop1Data.Is("テキスト1");
+                firstIterationLoop1Data.Is("Test1");
 
                 // B3:The first iteration of Loop2 within the first iteration of Loop1, verify if the value is stored as it is.
                 var firstLoop2DatawithinFirstLoop1 = sheet.Cell(3, 2).Value.GetNumber().ToString();
@@ -286,7 +286,7 @@ namespace Test
 
                 // B6:The last iteration of Loop1, verify if the value is stored as it is.
                 var lastIterationLoop1Data = sheet.Cell(6, 2).Value.GetText();
-                lastIterationLoop1Data.Is("テキスト2");
+                lastIterationLoop1Data.Is("Test2");
 
                 // B7:The first iteration of Loop2 within the last iteration of Loop1, verify if the value is stored as it is.
                 var firstLoop2DatawithinLastLoop1 = sheet.Cell(7, 2).Value.GetNumber().ToString();
