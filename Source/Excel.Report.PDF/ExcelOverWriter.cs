@@ -8,8 +8,6 @@ namespace Excel.Report.PDF
     {
         public static async Task OverWrite(this IXLWorksheet sheet, IExcelSymbolConverter converter)
         {
-            await Task.CompletedTask;
-
             // Get all rows and columns of the sheet
             ExcelUtils.GetRowColCount(sheet, out var rowCount, out var colCount);
 
