@@ -1,4 +1,5 @@
 ﻿using ClosedXML.Excel;
+using System;
 using System.Collections;
 
 namespace Excel.Report.PDF
@@ -7,61 +8,87 @@ namespace Excel.Report.PDF
     {
         public static async Task OverWrite(this IXLWorksheet sheet, IExcelSymbolConverter converter)
         {
+            await Task.CompletedTask;
+
+            // Get all rows and columns of the sheet
             ExcelUtils.GetRowColCount(sheet, out var rowCount, out var colCount);
-            for (var i = 0; i < rowCount; i++)
+
+            await OverWrite(sheet, 1, rowCount, colCount, converter);
+        }
+
+        private static async Task<int> OverWrite(IXLWorksheet sheet, int startRow, int endRow, int colCount, IExcelSymbolConverter converter)
+        {
+            for (int i = startRow; i <= endRow;)
             {
-                var rowIndex = i + 1;
+                await OverWriteCell(sheet, i, colCount, async t => await converter.GetData(t));
 
-                var leftCell = sheet.GetText(rowIndex, 1).Trim();
-
-                if (leftCell.StartsWith("#LoopRow"))
+                LoopInfo loopInfo = new();
+                if (!await TryParseLoop(sheet.GetText(i, 1).Trim(), converter, loopInfo))
                 {
-                    // #LoopRow($list, i, rowCopyCount)
-                    var args = leftCell.Replace("#LoopRow", "").Replace("(", "").Replace(")", "").Split(',').Select(e=>e.Trim()).ToArray();
-
-                    // rowCopyCount is optional
-                    var rowCopyCount = 1;
-                    if (args.Length == 3)
-                    {
-                        if (!int.TryParse(args[2], out rowCopyCount)) continue;
-                    }
-
-                    // #list and i(enumerable name) are must
-                    if (args.Length < 2) continue;
-
-                    if (!args[0].StartsWith("$")) continue;
-                    var enumerable = (await converter.GetData(args[0].Substring(1)))?.Value as IEnumerable;
-                    if (enumerable == null) continue;
-
-                    var list = enumerable.OfType<object?>().ToList();
-                    var enumerableName = args[1];
-
-                    // delete #LoopRow
-                    var cell = sheet.Cell(rowIndex, 1);
-                    cell.SetValue(XLCellValue.FromObject(null));
-
-                    // copy rows
-                    CopyRows(sheet, rowIndex, rowCopyCount, list.Count);
-
-                    // over write
-                    foreach (var e in list)
-                    {
-                        for (int j = 0; j < rowCopyCount; j++)
-                        {
-                            await OverWriteCell(sheet, rowIndex, colCount, async t => await converter.GetData(e, enumerableName, t));
-                            rowIndex++;
-                        }
-                    }
-
-                    var addRowCount = (list.Count - 1) * rowCopyCount;
-                    rowCount += addRowCount;
-                    i += addRowCount;
+                    i++;
+                    continue;
                 }
-                else
+
+                // delete #LoopRow
+                var cell = sheet.Cell(i, 1);
+                cell.SetValue(XLCellValue.FromObject(null));
+
+                // copy rows
+                CopyRows(sheet, i, loopInfo.RowCopyCount, loopInfo.LoopList.Count);
+
+                // over write
+                bool isFirstLoop = true;
+                foreach (var e in loopInfo.LoopList)
                 {
-                    await OverWriteCell(sheet, rowIndex, colCount, async t => await converter.GetData(t));
+                    var elementConverter = converter.CreateChildExcelSymbolConverter(e, loopInfo.LoopName);
+
+                    // Recursive Processing
+                    var processedRows = await OverWrite(sheet, i, i + loopInfo.RowCopyCount - 1, colCount, elementConverter);
+                    i += processedRows;
+
+                    // Increment endRow
+                    endRow = IncrementEndRow(ref isFirstLoop, endRow, processedRows, loopInfo.RowCopyCount);
                 }
             }
+            // Processed Rows
+            return endRow - startRow + 1;
+        }
+
+        class LoopInfo
+        {
+            internal int RowCopyCount { get; set; }
+            internal List<object?> LoopList { get; set; } = new();
+            internal string LoopName { get; set; } = string.Empty;
+        }
+
+        private static async Task<bool> TryParseLoop(string leftCell, IExcelSymbolConverter converter, LoopInfo loopInfo)
+        {           
+            if (!leftCell.StartsWith("#LoopRow")) return false;
+
+            // #LoopRow($list, i, rowCopyCount)
+            var args = leftCell.Replace("#LoopRow", "").Replace("(", "").Replace(")", "").Split(',').Select(e => e.Trim()).ToArray();
+
+            // rowCopyCount is optional
+            var rowCopyCount = 1;
+            if (args.Length == 3)
+            {
+                if (!int.TryParse(args[2], out rowCopyCount)) return false;
+            }
+            loopInfo.RowCopyCount = rowCopyCount;
+
+            // #list and i(enumerable name) are must
+            if (args.Length < 2) return false;
+
+            if (!args[0].StartsWith("$")) return false;
+            var enumerableName = args[0].Substring(1);
+            loopInfo.LoopName = args[1];
+
+            var enumerable = (await converter.GetData(enumerableName))?.Value as IEnumerable;
+            if (enumerable == null) return false;
+
+            loopInfo.LoopList = enumerable.OfType<object?>().ToList();
+
+            return true;
         }
 
         static async Task OverWriteCell(IXLWorksheet sheet, int rowIndex, int colCount, Func<string, Task<ExcelOverWriteCell?>> converter)
@@ -72,13 +99,14 @@ namespace Excel.Report.PDF
                 var text = sheet.GetText(rowIndex, cellIndex).Trim();
                 if (text.StartsWith("$"))
                 {
-                    SetCellData(sheet, rowIndex, cellIndex, await converter(text.Substring(1)));
+                    var x = await converter(text.Substring(1));
+                    SetCellData(sheet, rowIndex, cellIndex, x);
                 }
             }
         }
 
         static void SetCellData(IXLWorksheet sheet, int rowIndex, int cellIndex, ExcelOverWriteCell? cellData)
-        {
+        { 
             if (cellData == null) return;
             var cell = sheet.Cell(rowIndex, cellIndex);
             cell.SetValue(XLCellValue.FromObject(cellData.Value));
@@ -106,5 +134,23 @@ namespace Excel.Report.PDF
                 }
             }
         }
+
+        static int IncrementEndRow(ref bool isFirstLoop, int endRow, int processedRows, int rowCopyCount)
+        {
+            if (isFirstLoop)
+            {
+                isFirstLoop = false;
+
+                // Subtract duplicate rows from the processed rows
+                endRow += (processedRows - rowCopyCount);
+            }
+            else
+            {
+                endRow += processedRows;
+            }
+
+            return endRow;
+        }
+
     }
 }
