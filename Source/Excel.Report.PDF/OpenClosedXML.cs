@@ -308,7 +308,10 @@ namespace Excel.Report.PDF
             return list.ToArray();
         }
 
-        internal void GetSheetMaxRowCol(WorksheetPart worksheetPart, out int maxRow, out int maxColumn)
+        internal void GetSheetMaxRowCol(int sheetPos, out int maxRow, out int maxColumn)
+            => GetSheetMaxRowCol(GetWorkSheetPartByPosition(sheetPos), out maxRow, out maxColumn);
+
+        void GetSheetMaxRowCol(WorksheetPart worksheetPart, out int maxRow, out int maxColumn)
         {
             // 1. Enumerate all rows and cells
             var rows = worksheetPart.Worksheet.Descendants<Row>();
