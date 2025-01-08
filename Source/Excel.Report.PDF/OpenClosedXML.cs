@@ -1,10 +1,11 @@
 ﻿using ClosedXML.Excel;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Drawing;
-using System.Drawing;
 using DocumentFormat.OpenXml;
 using PdfSharp.Drawing;
 using ClosedXML.Excel.Drawings;
+using DocumentFormat.OpenXml.Spreadsheet;
+using Color = System.Drawing.Color;
 
 namespace Excel.Report.PDF
 {
@@ -307,33 +308,72 @@ namespace Excel.Report.PDF
             return list.ToArray();
         }
 
-        static void GetSheetMaxRowCol(WorksheetPart worksheetPart, out int maxRow, out int maxColumn)
+        internal void GetSheetMaxRowCol(WorksheetPart worksheetPart, out int maxRow, out int maxColumn)
         {
-            var reference = worksheetPart.Worksheet.SheetDimension?.Reference?.Value;
-            if (reference == null) throw new InvalidDataException("Invalid SheetDimension");
-            var referenceParts = reference.Split(':');
-            var endReference = referenceParts.Length == 2 ? referenceParts[1]:
-                referenceParts.Length == 1?  referenceParts[0] : null;
-            if (endReference == null) throw new InvalidDataException("Invalid SheetDimension");
-            maxRow = GetRowIndex(endReference);
-            maxColumn = GetColumnIndex(endReference);
+            // 1. Enumerate all rows and cells
+            var rows = worksheetPart.Worksheet.Descendants<Row>();
+
+            if (!rows.Any())
+            {
+                maxRow = 0;
+                maxColumn = 0;
+                return;
+            }
+
+            // 2. Calculate the minimum and maximum range
+            uint uintMaxRow = rows.Max(r => r.RowIndex) ?? 0;
+            maxRow = (int)uintMaxRow;
+
+            maxColumn = int.MinValue;
+            foreach (var row in rows)
+            {
+                var cells = row.Elements<Cell>();
+                foreach (var cell in cells)
+                {
+                    var cellReference = cell.CellReference;
+                    if (!string.IsNullOrEmpty(cell.CellReference))
+                    {
+                        int columnIndex = GetColumnIndex(cell.CellReference);
+                        if (columnIndex > maxColumn) maxColumn = columnIndex;
+                    }
+                }
+            }
+
+            // 3. If the column does not exist
+            if (maxColumn == int.MinValue)
+            {
+                maxColumn = 1; // Column A
+            }
         }
 
-        static int GetRowIndex(string cellReference)
-            => int.Parse(new string(cellReference.Where(char.IsDigit).ToArray()));
-
-        static int GetColumnIndex(string cellReference)
+        // Get column number from cell reference
+        static int GetColumnIndex(string? cellReference)
         {
-            var columnName = new string(cellReference.Where(char.IsLetter).ToArray());
-            int columnNumber = 0;
-            int multiplier = 1;
-
-            foreach (char c in columnName.ToUpper().Reverse())
+            if (string.IsNullOrEmpty(cellReference))
             {
-                columnNumber += multiplier * ((c - 'A') + 1);
-                multiplier *= 26;
+                return 0;
             }
-            return columnNumber;
+
+            var colPart = new string(cellReference.Where(char.IsLetter).ToArray());
+            int colIndex = 0;
+            foreach (char c in colPart)
+            {
+                colIndex = (colIndex * 26) + (c - 'A' + 1);
+            }
+            return colIndex;
+        }
+
+        // Get column name from column number
+        static string GetColumnName(int columnIndex)
+        {
+            var columnName = string.Empty;
+            while (columnIndex > 0)
+            {
+                var remainder = (columnIndex - 1) % 26;
+                columnName = (char)(remainder + 'A') + columnName;
+                columnIndex = (columnIndex - remainder - 1) / 26;
+            }
+            return columnName;
         }
 
         internal static double PixelToPoint(double src)
