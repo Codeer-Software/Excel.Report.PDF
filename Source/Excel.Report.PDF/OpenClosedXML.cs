@@ -264,7 +264,10 @@ namespace Excel.Report.PDF
             internal double Width { get; set; }
         }
 
-        IXLRange[] GetPageRanges(IXLWorksheet ws, WorksheetPart worksheetPart)
+        internal void GetPageRanges(IXLWorksheet ws, int sheetPos, int? horizontalPageBreak = null, int? verticalPageBreak = null)
+            =>GetPageRanges(ws, GetWorkSheetPartByPosition(sheetPos), horizontalPageBreak, verticalPageBreak);
+
+        IXLRange[] GetPageRanges(IXLWorksheet ws, WorksheetPart worksheetPart, int? horizontalPageBreak = null, int? verticalPageBreak = null)
         {
             GetSheetMaxRowCol(worksheetPart, out var maxRow, out var maxColumn);
             if (maxRow == 0 || maxColumn == 0) return new IXLRange[0];
@@ -305,6 +308,20 @@ namespace Excel.Report.PDF
                     list.Add(ws.Range(row.Start, col.Start, row.End, col.End));
                 }
             }
+
+            // Set the Break　page information (row and column)
+            var rowBreaks = worksheetPart.Worksheet.Elements<RowBreaks>().FirstOrDefault();
+            if(rowBreaks == null && horizontalPageBreak != null)
+            {
+                ws.PageSetup.AddHorizontalPageBreak(horizontalPageBreak ?? 0);
+            }
+
+            var colBreaks = worksheetPart.Worksheet.Elements<ColumnBreaks>().FirstOrDefault();
+            if (rowBreaks == null && verticalPageBreak != null)
+            {
+                ws.PageSetup.AddVerticalPageBreak(verticalPageBreak ?? 0);
+            }
+
             return list.ToArray();
         }
 
