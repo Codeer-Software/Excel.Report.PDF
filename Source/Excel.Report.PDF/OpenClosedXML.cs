@@ -6,6 +6,8 @@ using PdfSharp.Drawing;
 using ClosedXML.Excel.Drawings;
 using DocumentFormat.OpenXml.Spreadsheet;
 using Color = System.Drawing.Color;
+using DocumentFormat.OpenXml.Math;
+using PdfSharp.Pdf.Content.Objects;
 
 namespace Excel.Report.PDF
 {
@@ -57,15 +59,15 @@ namespace Excel.Report.PDF
             return workSheetPart;
         }
 
-        internal List<List<CellInfo>> GetCellInfo(int sheetPosition, double pdfWidthSrc, double pdfHeightSrc, out double scaling)
-            => GetCellInfo(Workbook.Worksheet(sheetPosition), GetWorkSheetPartByPosition(sheetPosition), pdfWidthSrc, pdfHeightSrc, out scaling);
+        internal List<List<CellInfo>> GetCellInfo(int sheetPosition, double pdfWidthSrc, double pdfHeightSrc, out double scaling, PageBreakInfo? pageBreakInfo = null)
+            => GetCellInfo(Workbook.Worksheet(sheetPosition), GetWorkSheetPartByPosition(sheetPosition), pdfWidthSrc, pdfHeightSrc, out scaling, pageBreakInfo);
 
-        internal List<List<CellInfo>> GetCellInfo(string sheetName, double pdfWidthSrc, double pdfHeightSrc, out double scaling)
-            => GetCellInfo(Workbook.Worksheet(sheetName), GetWorkSheetPartByName(sheetName), pdfWidthSrc, pdfHeightSrc, out scaling);
+        internal List<List<CellInfo>> GetCellInfo(string sheetName, double pdfWidthSrc, double pdfHeightSrc, out double scaling, PageBreakInfo? pageBreakInfo = null)
+            => GetCellInfo(Workbook.Worksheet(sheetName), GetWorkSheetPartByName(sheetName), pdfWidthSrc, pdfHeightSrc, out scaling, pageBreakInfo);
 
-        List<List<CellInfo>> GetCellInfo(IXLWorksheet ws, WorksheetPart worksheetPart, double pdfWidthSrc, double pdfHeightSrc, out double scaling)
+        List<List<CellInfo>> GetCellInfo(IXLWorksheet ws, WorksheetPart worksheetPart, double pdfWidthSrc, double pdfHeightSrc, out double scaling, PageBreakInfo? pageBreakInfo = null)
             => GetCellInfo(ws.PageSetup, pdfWidthSrc, pdfHeightSrc,
-                GetPageRanges(ws, worksheetPart), ws.MergedRanges.ToArray(), ws.Pictures.OfType<IXLPicture>().ToArray(), out scaling);
+                GetPageRanges(ws, worksheetPart, pageBreakInfo), ws.MergedRanges.ToArray(), ws.Pictures.OfType<IXLPicture>().ToArray(), out scaling);
 
         internal XPen ConvertToXPen(XLBorderStyleValues borderStyle, XLColor? color, double scale)
         {
@@ -264,14 +266,227 @@ namespace Excel.Report.PDF
             internal double Width { get; set; }
         }
 
-        internal void GetPageRanges(IXLWorksheet ws, int sheetPos, int? horizontalPageBreak = null, int? verticalPageBreak = null)
-            =>GetPageRanges(ws, GetWorkSheetPartByPosition(sheetPos), horizontalPageBreak, verticalPageBreak);
+        public class PageBreakInfo
+        {
+            public int? RowCount { get; private set; }
+            public int? ColumnCount { get; private set; }
+            public double? PageHeight { get; private set; }
+            public double? PageWidth { get; private set; }
+            public bool? IsRowColumnMode { get; private set; }
 
-        IXLRange[] GetPageRanges(IXLWorksheet ws, WorksheetPart worksheetPart, int? horizontalPageBreak = null, int? verticalPageBreak = null)
+            public PageBreakInfo(bool? isRowColumMode = null, double? coordinate = null, double? axis = null)
+            {
+                IsRowColumnMode = isRowColumMode;
+
+                if (isRowColumMode == true)
+                {
+                    if (coordinate != null)
+                    {
+                        RowCount = (int)coordinate;
+                    }
+                    if (axis != null)
+                    {
+                        ColumnCount = (int)axis;
+                    }
+                }
+                else
+                {
+                    if (coordinate != null)
+                    {
+                        PageHeight = (int)coordinate;
+                    }
+                    if (axis != null)
+                    {
+                        PageWidth = (int)axis;
+                    }
+                }
+            }
+        }
+
+        internal void GetPageRanges(IXLWorksheet ws, int sheetPos, PageBreakInfo? pageBreakInfo = null)
+            =>GetPageRanges(ws, GetWorkSheetPartByPosition(sheetPos), pageBreakInfo);
+
+        IXLRange[] GetPageRanges(IXLWorksheet ws, WorksheetPart worksheetPart, PageBreakInfo? pageBreakInfo = null)
         {
             GetSheetMaxRowCol(worksheetPart, out var maxRow, out var maxColumn);
             if (maxRow == 0 || maxColumn == 0) return new IXLRange[0];
 
+            if (pageBreakInfo == null)
+            {
+                return GetPageRangesByExcelOrder(ws, maxRow, maxColumn);
+            }
+            else 
+            {
+                if (pageBreakInfo.ColumnCount != null)
+                {
+                    return GetPageRangesByRowColCount(ws, pageBreakInfo.RowCount!, pageBreakInfo.ColumnCount!, maxRow, maxColumn);
+                }
+                else 
+                {
+                    return GetPageRangesBySize(ws, pageBreakInfo.PageHeight!, pageBreakInfo.PageWidth!, maxRow, maxColumn);
+                }
+            }
+
+            
+        }
+
+
+        private IXLRange[] GetPageRangesByRowColCount(IXLWorksheet ws, int? rowCount, int? colCount, int maxRow, int maxColumn)
+        {
+
+            //var list = new List<IXLRange>();
+            //var endPageRow = rowCountPerPage;
+            //var startPageRow = 0;
+            //var lastAddRow = -1;
+            //for (int row = rowCountPerPage; row < maxRow; row += rowCountPerPage)
+            //{
+            //    int col = colCountPerPage;
+            //    for (; col < maxColumn; col += colCountPerPage)
+            //    {
+            //        list.Add(ws.Range(startPageRow, col - colCountPerPage, row, col));
+
+            //        if (col == endPageCol)
+            //        {
+            //            list.Add(ws.Range(startPageRow, startPageCol, row, col));
+            //            //改ページ
+            //            startPageCol = col + 1;
+            //            endPageCol = col + colCountPerPage;
+            //            lastAddCol = col;
+            //        }
+            //    }
+            //    if (row == endPageRow && lastAddCol != maxColumn - 1)
+            //    {
+            //        list.Add(ws.Range(startPageRow, startPageCol, row, maxColumn - 1));
+            //        //改ページ
+            //        endPageRow = row + rowCountPerPage;
+            //        startPageRow = row + 1;
+            //    }
+            //}
+
+
+
+
+
+
+            var rowRanges = new List<StartEnd>();
+            int rowIndex = 1;
+            // 改ページ（行）の設定
+            int pageBreakRow = rowCount ?? 0;
+            if (pageBreakRow > 0)
+            {
+                for (int i = pageBreakRow; i <= maxRow; i += pageBreakRow)
+                {
+                    ws.PageSetup.AddHorizontalPageBreak(i);
+                    rowRanges.Add(new StartEnd { Start = rowIndex, End = i });
+                    rowIndex = i + 1;
+                }
+                ws.PageSetup.AddHorizontalPageBreak(maxRow);
+                rowRanges.Add(new StartEnd { Start = maxRow, End = maxRow });
+            }
+
+            var colRanges = new List<StartEnd>();
+            var colIndex = 1;
+            // 改ページ（列）の設定
+            int pageBreakColum = colCount ?? 0;
+            if (pageBreakColum > 0)
+            {
+                for (int i = pageBreakColum; i <= maxColumn; i += pageBreakColum)
+                {
+                    ws.PageSetup.AddVerticalPageBreak(i);
+                    colRanges.Add(new StartEnd { Start = colIndex, End = i });
+                    colIndex = i + 1;
+                }
+                ws.PageSetup.AddVerticalPageBreak(maxColumn);
+                rowRanges.Add(new StartEnd { Start = maxColumn, End = maxColumn });
+            }           
+            
+            var list = new List<IXLRange>();
+            foreach (var row in rowRanges)
+            {
+                foreach (var col in colRanges)
+                {
+                    list.Add(ws.Range(row.Start, col.Start, row.End, col.End));
+                }
+            }
+            return list.ToArray();
+        }
+
+        private IXLRange[] GetPageRangesBySize(IXLWorksheet ws, double? coordinate, double? axis, int maxRow, int maxColumn)
+        {
+            var rowRanges = new List<StartEnd>();
+            int rowIndex = 1;
+
+            double totalHeight = 0;
+            var pageBreakHeight = coordinate ?? 0;
+            if (pageBreakHeight > 0)
+            {
+                for (int rowNumber = 1; rowNumber <= maxRow; rowNumber++)
+                {
+                    var row = ws.Row(rowNumber);
+
+                    // 行の高さを取得
+                    double rowHeight = row.Height;
+
+                    totalHeight += rowHeight;
+
+                    // 累積高さが指定した値を超えたら改ページを挿入
+                    if (totalHeight >= pageBreakHeight)
+                    {
+                        ws.PageSetup.AddHorizontalPageBreak(rowNumber);
+                        rowRanges.Add(new StartEnd { Start = rowIndex, End = rowNumber });
+                        rowIndex = rowNumber + 1;
+
+                        // 改ページ後、累積高さをリセット
+                        totalHeight = 0;
+                    }
+                }
+                ws.PageSetup.AddHorizontalPageBreak(maxRow);
+                rowRanges.Add(new StartEnd { Start = maxRow, End = maxRow });
+            }
+
+            var colRanges = new List<StartEnd>();
+            var colIndex = 1;
+            double totalWidth = 0;
+            var pageBreakWidth = axis ?? 0;
+            if (pageBreakWidth > 0)
+            {
+                for (int colNumber = 1; colNumber <= maxColumn; colNumber++)
+                {
+                    var column = ws.Column(colNumber);
+
+                    // 列の幅を取得
+                    double columnWidth = column.Width;
+
+                    totalWidth += columnWidth;
+
+                    // 累積幅が指定した値を超えたら改ページを挿入
+                    if (totalWidth >= pageBreakWidth)
+                    {
+                        ws.PageSetup.AddVerticalPageBreak(colNumber);
+                        colRanges.Add(new StartEnd { Start = colIndex, End = colNumber });
+                        colIndex = colNumber + 1;
+
+                        // 改ページ後、累積幅をリセット
+                        totalWidth = 0;
+                    }
+                }
+                ws.PageSetup.AddHorizontalPageBreak(maxColumn);
+                colRanges.Add(new StartEnd { Start = maxColumn, End = maxColumn });
+            }
+            var list = new List<IXLRange>();
+            foreach (var row in rowRanges)
+            {
+                foreach (var col in colRanges)
+                {
+                    list.Add(ws.Range(row.Start, col.Start, row.End, col.End));
+                }
+            }
+            return list.ToArray();
+        }
+
+
+        private static IXLRange[] GetPageRangesByExcelOrder(IXLWorksheet ws, int maxRow, int maxColumn)
+        {
             var rowRanges = new List<StartEnd>();
             var rowIndex = 1;
             for (int i = 0; i < ws.PageSetup.RowBreaks.Count; i++)
@@ -308,20 +523,6 @@ namespace Excel.Report.PDF
                     list.Add(ws.Range(row.Start, col.Start, row.End, col.End));
                 }
             }
-
-            // Set the Break　page information (row and column)
-            var rowBreaks = worksheetPart.Worksheet.Elements<RowBreaks>().FirstOrDefault();
-            if(rowBreaks == null && horizontalPageBreak != null)
-            {
-                ws.PageSetup.AddHorizontalPageBreak(horizontalPageBreak ?? 0);
-            }
-
-            var colBreaks = worksheetPart.Worksheet.Elements<ColumnBreaks>().FirstOrDefault();
-            if (rowBreaks == null && verticalPageBreak != null)
-            {
-                ws.PageSetup.AddVerticalPageBreak(verticalPageBreak ?? 0);
-            }
-
             return list.ToArray();
         }
 

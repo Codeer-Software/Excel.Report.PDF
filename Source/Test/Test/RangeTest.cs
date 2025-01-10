@@ -2,7 +2,10 @@
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Spreadsheet;
 using Excel.Report.PDF;
+using Microsoft.VisualStudio.TestPlatform.PlatformAbstractions.Interfaces;
+using NUnit.Framework.Internal.Execution;
 using PdfSharp.Fonts;
+using System.IO;
 namespace Test
 {
     public class RangeTest
@@ -69,46 +72,40 @@ namespace Test
         public void PageBreakTest()
         {
             using (var stream = new FileStream(Path.Combine(TestEnvironment.PdfSrcPath, "PageBreakTest.xlsx"), FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
-            using (var book = new XLWorkbook(stream))
+            using (var book = new OpenClosedXML(stream))
             {
-                var worksheet = book.Worksheet(1);
-                worksheet.Row(1).InsertRowsAbove(1);
-                worksheet.Cell("A1").Value = "NewCellData";
+                var pageBreakInfo = new OpenClosedXML.PageBreakInfo(true, 15, 5);
+                var pages = book.GetCellInfo(1, 200, 200, out double scaling, pageBreakInfo);
+                pages.Count.Is(4);
 
-                var openClosedXML = new OpenClosedXML(stream);
-                // Pass page break information (row and column) as arguments
-                openClosedXML.GetPageRanges(worksheet, 1, 10, 2);
+                {
+                    var page = pages[0];
+                    var pageLastCellInfo = page.Last();
+                    pageLastCellInfo.Cell!.Address.RowNumber.Is(15);
+                }
+                {
+                    var page = pages[1];
+                    var pageLastCellInfo = page.Last();
+                    pageLastCellInfo.Cell!.Address.RowNumber.Is(30);
+                }
+                {
+                    var page = pages[2];
+                    var pageLastCellInfo = page.Last();
+                    pageLastCellInfo.Cell!.Address.RowNumber.Is(30);
+                }
+                {
+                    var page = pages[3];
+                    var pageLastCellInfo = page.Last();
+                    pageLastCellInfo.Cell!.Address.RowNumber.Is(30);
+                }
 
-                book.SaveAs(Path.Combine(TestEnvironment.TestResultsPath, "PageBreakTest.xlsx"));
+                //    string? cellInfo2 = pages[0]?.LastOrDefault()?.Cell?.ToString();
+                //  var pageBreakColum = cellInfo1?.Where(char.IsLetter).ToArray();
+                //  pageBreakColum?.Is("E");
+
             }
 
-            using (var document = SpreadsheetDocument.Open(Path.Combine(TestEnvironment.TestResultsPath, "PageBreakTest.xlsx"), false))
-            {
-                var workbookPart = document.WorkbookPart;
-                var sheet = workbookPart!.Workbook.Sheets!.Elements<Sheet>().FirstOrDefault();
-
-                // Specify sheet1
-                var worksheetPart = (WorksheetPart)workbookPart.GetPartById("rId1");
-                var worksheet = worksheetPart.Worksheet;
-
-                // Get the page break setting
-                var rowBreaks = worksheet.Elements<RowBreaks>().FirstOrDefault();
-                var colBreaks = worksheet.Elements<ColumnBreaks>().FirstOrDefault();
-
-                // Get the last element of the page break setting (row)
-                var lastRowBreak = rowBreaks?.LastChild as Break;
-                var lastRowBreakId = lastRowBreak?.Id ?? 0;
-
-                // Get the last element of the page break setting (column)
-                var lastColBreaks = colBreaks?.LastChild as Break;
-                var lastColBreakId = lastColBreaks?.Id ?? 0;
-
-                lastRowBreakId.InnerText.Is("10");
-                lastColBreakId.InnerText.Is("2");
-
-                using var outStream = ExcelConverter.ConvertToPdf(Path.Combine(TestEnvironment.TestResultsPath, "PageBreakTest.xlsx"), 1);
-                File.WriteAllBytes(Path.Combine(TestEnvironment.TestResultsPath, "PageBreakTest.pdf"), outStream.ToArray());
-            }
+           
         }
     }
 }
