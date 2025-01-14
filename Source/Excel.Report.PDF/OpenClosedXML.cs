@@ -268,36 +268,36 @@ namespace Excel.Report.PDF
 
         public class PageBreakInfo
         {
-            public int? RowCount { get; private set; }
-            public int? ColumnCount { get; private set; }
-            public double? PageHeight { get; private set; }
-            public double? PageWidth { get; private set; }
+            public int RowCount { get; private set; } = 0;
+            public int ColumnCount { get; private set; } = 0;
+            public double PageHeight { get; private set; } = 0;
+            public double PageWidth { get; private set; } = 0;
             public bool? IsRowColumnMode { get; private set; }
 
-            public PageBreakInfo(bool? isRowColumMode = null, double? coordinate = null, double? axis = null)
+            public PageBreakInfo(bool? isRowColumMode = null, double? RowHeight = null, double? ColumWidth = null)
             {
                 IsRowColumnMode = isRowColumMode;
 
                 if (isRowColumMode == true)
                 {
-                    if (coordinate != null)
+                    if (RowHeight != null)
                     {
-                        RowCount = (int)coordinate;
+                        RowCount = (int)RowHeight;
                     }
-                    if (axis != null)
+                    if (ColumWidth != null)
                     {
-                        ColumnCount = (int)axis;
+                        ColumnCount = (int)ColumWidth;
                     }
                 }
                 else
                 {
-                    if (coordinate != null)
+                    if (RowHeight != null)
                     {
-                        PageHeight = (int)coordinate;
+                        PageHeight = (int)RowHeight;
                     }
-                    if (axis != null)
+                    if (ColumWidth != null)
                     {
-                        PageWidth = (int)axis;
+                        PageWidth = (int)ColumWidth;
                     }
                 }
             }
@@ -317,88 +317,60 @@ namespace Excel.Report.PDF
             }
             else 
             {
-                if (pageBreakInfo.ColumnCount != null)
+                if (pageBreakInfo.RowCount > 0 && pageBreakInfo.ColumnCount > 0)
                 {
                     return GetPageRangesByRowColCount(ws, pageBreakInfo.RowCount!, pageBreakInfo.ColumnCount!, maxRow, maxColumn);
                 }
-                else 
+                else if(pageBreakInfo.PageHeight > 0 && pageBreakInfo.PageWidth > 0)
                 {
                     return GetPageRangesBySize(ws, pageBreakInfo.PageHeight!, pageBreakInfo.PageWidth!, maxRow, maxColumn);
                 }
-            }
-
-            
+                else
+                {
+                    return GetPageRangesByExcelOrder(ws, maxRow, maxColumn);
+                }
+            }           
         }
 
-
-        private IXLRange[] GetPageRangesByRowColCount(IXLWorksheet ws, int? rowCount, int? colCount, int maxRow, int maxColumn)
+        private IXLRange[] GetPageRangesByRowColCount(IXLWorksheet ws, int rowCount, int colCount, int maxRow, int maxColumn)
         {
-
-            //var list = new List<IXLRange>();
-            //var endPageRow = rowCountPerPage;
-            //var startPageRow = 0;
-            //var lastAddRow = -1;
-            //for (int row = rowCountPerPage; row < maxRow; row += rowCountPerPage)
-            //{
-            //    int col = colCountPerPage;
-            //    for (; col < maxColumn; col += colCountPerPage)
-            //    {
-            //        list.Add(ws.Range(startPageRow, col - colCountPerPage, row, col));
-
-            //        if (col == endPageCol)
-            //        {
-            //            list.Add(ws.Range(startPageRow, startPageCol, row, col));
-            //            //改ページ
-            //            startPageCol = col + 1;
-            //            endPageCol = col + colCountPerPage;
-            //            lastAddCol = col;
-            //        }
-            //    }
-            //    if (row == endPageRow && lastAddCol != maxColumn - 1)
-            //    {
-            //        list.Add(ws.Range(startPageRow, startPageCol, row, maxColumn - 1));
-            //        //改ページ
-            //        endPageRow = row + rowCountPerPage;
-            //        startPageRow = row + 1;
-            //    }
-            //}
-
-
-
-
-
-
+            // Setting page breaks (Rows)
             var rowRanges = new List<StartEnd>();
-            int rowIndex = 1;
-            // 改ページ（行）の設定
-            int pageBreakRow = rowCount ?? 0;
-            if (pageBreakRow > 0)
+            var pageBreakRow = rowCount;
+            var endRowIndex = pageBreakRow;
+
+            for (int startRowIndex = 1; startRowIndex <= maxRow; endRowIndex += pageBreakRow)
             {
-                for (int i = pageBreakRow; i <= maxRow; i += pageBreakRow)
+                if (endRowIndex < maxRow)
                 {
-                    ws.PageSetup.AddHorizontalPageBreak(i);
-                    rowRanges.Add(new StartEnd { Start = rowIndex, End = i });
-                    rowIndex = i + 1;
+                    rowRanges.Add(new StartEnd { Start = startRowIndex, End = endRowIndex });
+                    startRowIndex = endRowIndex + 1;
                 }
-                ws.PageSetup.AddHorizontalPageBreak(maxRow);
-                rowRanges.Add(new StartEnd { Start = maxRow, End = maxRow });
+                if(endRowIndex >= maxRow)
+                {
+                    rowRanges.Add(new StartEnd { Start = startRowIndex, End = maxRow });
+                    startRowIndex = endRowIndex + 1;
+                }
             }
 
+            // Setting page breaks (columns)
             var colRanges = new List<StartEnd>();
-            var colIndex = 1;
-            // 改ページ（列）の設定
-            int pageBreakColum = colCount ?? 0;
-            if (pageBreakColum > 0)
+            var pageBreakColum = colCount;
+            var endColIndex = pageBreakColum;
+
+            for (int startColIndex = 1; startColIndex <= maxColumn; endColIndex += pageBreakColum)
             {
-                for (int i = pageBreakColum; i <= maxColumn; i += pageBreakColum)
+                if (endColIndex < maxColumn)
                 {
-                    ws.PageSetup.AddVerticalPageBreak(i);
-                    colRanges.Add(new StartEnd { Start = colIndex, End = i });
-                    colIndex = i + 1;
+                    colRanges.Add(new StartEnd { Start = startColIndex, End = endColIndex });
+                    startColIndex = endColIndex + 1;
                 }
-                ws.PageSetup.AddVerticalPageBreak(maxColumn);
-                rowRanges.Add(new StartEnd { Start = maxColumn, End = maxColumn });
-            }           
+                if(endColIndex >= maxColumn)
+                {
+                    colRanges.Add(new StartEnd { Start = startColIndex, End = maxColumn });
+                    startColIndex = endColIndex + 1;
+                }
+            }          
             
             var list = new List<IXLRange>();
             foreach (var row in rowRanges)
@@ -411,68 +383,77 @@ namespace Excel.Report.PDF
             return list.ToArray();
         }
 
-        private IXLRange[] GetPageRangesBySize(IXLWorksheet ws, double? coordinate, double? axis, int maxRow, int maxColumn)
+        private IXLRange[] GetPageRangesBySize(IXLWorksheet ws, double pageHeight, double pageWidth, int maxRow, int maxColumn)
         {
+            // Set page break (height)
             var rowRanges = new List<StartEnd>();
-            int rowIndex = 1;
-
+            var startRowIndex = 1;
+            var pageBreakHeight = pageHeight;
             double totalHeight = 0;
-            var pageBreakHeight = coordinate ?? 0;
-            if (pageBreakHeight > 0)
+
+            for (int endRowNumber = 1; startRowIndex <= maxRow; endRowNumber++)
             {
-                for (int rowNumber = 1; rowNumber <= maxRow; rowNumber++)
+                var row = ws.Row(endRowNumber);
+
+                // Get the row height
+                double rowHeight = row.Height;
+
+                totalHeight += rowHeight;
+
+                // Insert a page break when the cumulative height exceeds the specified value
+                if (totalHeight >= pageBreakHeight)
                 {
-                    var row = ws.Row(rowNumber);
-
-                    // 行の高さを取得
-                    double rowHeight = row.Height;
-
-                    totalHeight += rowHeight;
-
-                    // 累積高さが指定した値を超えたら改ページを挿入
-                    if (totalHeight >= pageBreakHeight)
+                    if (endRowNumber < maxRow)
                     {
-                        ws.PageSetup.AddHorizontalPageBreak(rowNumber);
-                        rowRanges.Add(new StartEnd { Start = rowIndex, End = rowNumber });
-                        rowIndex = rowNumber + 1;
-
-                        // 改ページ後、累積高さをリセット
-                        totalHeight = 0;
+                        rowRanges.Add(new StartEnd { Start = startRowIndex, End = endRowNumber });
+                        startRowIndex = endRowNumber + 1;
                     }
-                }
-                ws.PageSetup.AddHorizontalPageBreak(maxRow);
-                rowRanges.Add(new StartEnd { Start = maxRow, End = maxRow });
+
+                    if(endRowNumber >= maxRow)
+                    {
+                        rowRanges.Add(new StartEnd { Start = startRowIndex, End = maxRow });
+                        startRowIndex = endRowNumber + 1;
+                    }
+
+                    // After page break, reset cumulative height
+                    totalHeight = 0;
+                }               
             }
 
+            // Set page break (Width)
             var colRanges = new List<StartEnd>();
-            var colIndex = 1;
+            var startColIndex = 1;
+            var pageBreakWidth = pageWidth;
             double totalWidth = 0;
-            var pageBreakWidth = axis ?? 0;
-            if (pageBreakWidth > 0)
+            for (int endColNumber = 1; startColIndex <= maxColumn; endColNumber++)
             {
-                for (int colNumber = 1; colNumber <= maxColumn; colNumber++)
+                var column = ws.Column(endColNumber);
+
+                // Get the column width
+                double columnWidth = column.Width;
+
+                totalWidth += columnWidth;
+
+                // Insert a page break when the cumulative width exceeds the specified value
+                if (totalWidth >= pageBreakWidth)
                 {
-                    var column = ws.Column(colNumber);
-
-                    // 列の幅を取得
-                    double columnWidth = column.Width;
-
-                    totalWidth += columnWidth;
-
-                    // 累積幅が指定した値を超えたら改ページを挿入
-                    if (totalWidth >= pageBreakWidth)
+                    if (endColNumber < maxColumn)
                     {
-                        ws.PageSetup.AddVerticalPageBreak(colNumber);
-                        colRanges.Add(new StartEnd { Start = colIndex, End = colNumber });
-                        colIndex = colNumber + 1;
-
-                        // 改ページ後、累積幅をリセット
-                        totalWidth = 0;
+                        colRanges.Add(new StartEnd { Start = startColIndex, End = endColNumber });
+                        startColIndex = endColNumber + 1;                        
                     }
+
+                    if (endColNumber >= maxColumn)
+                    {
+                        colRanges.Add(new StartEnd { Start = startColIndex, End = maxColumn });
+                        startColIndex = endColNumber + 1;
+                    }
+
+                    // After page break, reset cumulative width
+                    totalWidth = 0;
                 }
-                ws.PageSetup.AddHorizontalPageBreak(maxColumn);
-                colRanges.Add(new StartEnd { Start = maxColumn, End = maxColumn });
             }
+
             var list = new List<IXLRange>();
             foreach (var row in rowRanges)
             {

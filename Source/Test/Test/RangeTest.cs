@@ -1,11 +1,6 @@
 ﻿using ClosedXML.Excel;
-using DocumentFormat.OpenXml.Packaging;
-using DocumentFormat.OpenXml.Spreadsheet;
 using Excel.Report.PDF;
-using Microsoft.VisualStudio.TestPlatform.PlatformAbstractions.Interfaces;
-using NUnit.Framework.Internal.Execution;
 using PdfSharp.Fonts;
-using System.IO;
 namespace Test
 {
     public class RangeTest
@@ -76,32 +71,44 @@ namespace Test
             {
                 var pageBreakInfo = new OpenClosedXML.PageBreakInfo(true, 15, 5);
                 var pages = book.GetCellInfo(1, 200, 200, out double scaling, pageBreakInfo);
-                pages.Count.Is(4);
+                pages.Count.Is(6);
 
                 {
                     var page = pages[0];
                     var pageLastCellInfo = page.Last();
                     pageLastCellInfo.Cell!.Address.RowNumber.Is(15);
+                    pageLastCellInfo.Cell!.Address.ColumnNumber.Is(5);
                 }
                 {
                     var page = pages[1];
                     var pageLastCellInfo = page.Last();
-                    pageLastCellInfo.Cell!.Address.RowNumber.Is(30);
+                    pageLastCellInfo.Cell!.Address.RowNumber.Is(15);
+                    pageLastCellInfo.Cell!.Address.ColumnNumber.Is(9);
                 }
                 {
                     var page = pages[2];
                     var pageLastCellInfo = page.Last();
                     pageLastCellInfo.Cell!.Address.RowNumber.Is(30);
+                    pageLastCellInfo.Cell!.Address.ColumnNumber.Is(5);
                 }
                 {
                     var page = pages[3];
                     var pageLastCellInfo = page.Last();
                     pageLastCellInfo.Cell!.Address.RowNumber.Is(30);
+                    pageLastCellInfo.Cell!.Address.ColumnNumber.Is(9);
                 }
-
-                //    string? cellInfo2 = pages[0]?.LastOrDefault()?.Cell?.ToString();
-                //  var pageBreakColum = cellInfo1?.Where(char.IsLetter).ToArray();
-                //  pageBreakColum?.Is("E");
+                {
+                    var page = pages[4];
+                    var pageLastCellInfo = page.Last();
+                    pageLastCellInfo.Cell!.Address.RowNumber.Is(31);
+                    pageLastCellInfo.Cell!.Address.ColumnNumber.Is(5);
+                }
+                {
+                    var page = pages[5];
+                    var pageLastCellInfo = page.Last();
+                    pageLastCellInfo.Cell!.Address.RowNumber.Is(31);
+                    pageLastCellInfo.Cell!.Address.ColumnNumber.Is(9);
+                }
 
             }
 
