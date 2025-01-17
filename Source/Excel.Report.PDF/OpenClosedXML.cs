@@ -17,9 +17,17 @@ namespace Excel.Report.PDF
         internal double PageWidth { get; private set; } = 0;
         private PageBreakInfo() { }
         public static PageBreakInfo CreateRowColumnPageBreak(int rowCount, int columnCount)
-            => new PageBreakInfo { RowCount = rowCount, ColumnCount = columnCount };
+        { 
+            if(rowCount == 0 || columnCount == 0)
+                throw new InvalidDataException("Invalid page break information");
+            return new PageBreakInfo { RowCount = rowCount, ColumnCount = columnCount }; 
+        }
         public static PageBreakInfo CreateSizePageBreak(double pageHeight, double pageWidth)
-            => new PageBreakInfo { PageHeight = pageHeight, PageWidth = pageWidth };
+        {
+            if (pageHeight == 0 || pageWidth == 0)
+                throw new InvalidDataException("Invalid page break information");
+            return new PageBreakInfo { PageHeight = pageHeight, PageWidth = pageWidth }; 
+        }
     }
 
     class OpenClosedXML : IDisposable

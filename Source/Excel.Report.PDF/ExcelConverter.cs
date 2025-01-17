@@ -8,28 +8,28 @@ namespace Excel.Report.PDF
         public static int MaxRow = 2000;
         public static int MaxColumn = 256;
 
-        public static MemoryStream ConvertToPdf(string filePath, int sheetPosition)
+        public static MemoryStream ConvertToPdf(string filePath, int sheetPosition, PageBreakInfo? pageBreakInfo = null)
         {
             using (var converter = new ExcelConverter(filePath))
-                return converter.ConvertToPdf(sheetPosition);
+                return converter.ConvertToPdf(sheetPosition, pageBreakInfo);
         }
 
-        public static MemoryStream ConvertToPdf(Stream stream, int sheetPosition)
+        public static MemoryStream ConvertToPdf(Stream stream, int sheetPosition, PageBreakInfo? pageBreakInfo = null)
         {
             using (var converter = new ExcelConverter(stream))
-                return converter.ConvertToPdf(sheetPosition);
+                return converter.ConvertToPdf(sheetPosition, pageBreakInfo);
         }
 
-        public static MemoryStream ConvertToPdf(string filePath, string sheetName)
+        public static MemoryStream ConvertToPdf(string filePath, string sheetName, PageBreakInfo? pageBreakInfo = null)
         {
             using (var converter = new ExcelConverter(filePath))
-                return converter.ConvertToPdf(sheetName);
+                return converter.ConvertToPdf(sheetName, pageBreakInfo);
         }
 
-        public static MemoryStream ConvertToPdf(Stream stream, string sheetName)
+        public static MemoryStream ConvertToPdf(Stream stream, string sheetName, PageBreakInfo? pageBreakInfo = null)
         {
             using (var converter = new ExcelConverter(stream))
-                return converter.ConvertToPdf(sheetName);
+                return converter.ConvertToPdf(sheetName, pageBreakInfo);
         }
 
         OpenClosedXML _openClosedXML;
@@ -50,24 +50,24 @@ namespace Excel.Report.PDF
             _myOpenStream?.Dispose();
         }
 
-        public MemoryStream ConvertToPdf(int sheetPosition)
+        public MemoryStream ConvertToPdf(int sheetPosition, PageBreakInfo? pageBreakInfo = null)
         {
             using (var pdf = new PdfDocument())
             {
                 var page = pdf.AddPageEx();
                 if (_openClosedXML.IsLandscape(sheetPosition)) page.Orientation = PdfSharp.PageOrientation.Landscape;
-                var allCells = _openClosedXML.GetCellInfo(sheetPosition, page.Width.Point, page.Height.Point, out var scaling);
+                var allCells = _openClosedXML.GetCellInfo(sheetPosition, page.Width.Point, page.Height.Point, out var scaling, pageBreakInfo);
                 return DrawPdf(pdf, page, allCells, scaling);
             }
         }
 
-        public MemoryStream ConvertToPdf(string sheetName)
+        public MemoryStream ConvertToPdf(string sheetName, PageBreakInfo? pageBreakInfo = null)
         {
             using (var pdf = new PdfDocument())
             {
                 var page = pdf.AddPageEx();
                 if (_openClosedXML.IsLandscape(sheetName)) page.Orientation = PdfSharp.PageOrientation.Landscape;
-                var allCells = _openClosedXML.GetCellInfo(sheetName, page.Width.Point, page.Height.Point, out var scaling);
+                var allCells = _openClosedXML.GetCellInfo(sheetName, page.Width.Point, page.Height.Point, out var scaling, pageBreakInfo);
                 return DrawPdf(pdf, page, allCells, scaling);
             }
         }
