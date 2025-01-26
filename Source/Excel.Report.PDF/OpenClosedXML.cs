@@ -1,13 +1,35 @@
 ﻿using ClosedXML.Excel;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Drawing;
-using System.Drawing;
 using DocumentFormat.OpenXml;
 using PdfSharp.Drawing;
 using ClosedXML.Excel.Drawings;
+using DocumentFormat.OpenXml.Spreadsheet;
+using Color = System.Drawing.Color;
 
 namespace Excel.Report.PDF
 {
+    public class PageBreakInfo
+    {
+        internal int RowCount { get; private set; } = 0;
+        internal int ColumnCount { get; private set; } = 0;
+        internal double PageHeight { get; private set; } = 0;
+        internal double PageWidth { get; private set; } = 0;
+        private PageBreakInfo() { }
+        public static PageBreakInfo CreateRowColumnPageBreak(int rowCount, int columnCount)
+        { 
+            if(rowCount == 0 || columnCount == 0)
+                throw new InvalidDataException("Invalid page break information");
+            return new PageBreakInfo { RowCount = rowCount, ColumnCount = columnCount }; 
+        }
+        public static PageBreakInfo CreateSizePageBreak(double pageHeight, double pageWidth)
+        {
+            if (pageHeight == 0 || pageWidth == 0)
+                throw new InvalidDataException("Invalid page break information");
+            return new PageBreakInfo { PageHeight = pageHeight, PageWidth = pageWidth }; 
+        }
+    }
+
     class OpenClosedXML : IDisposable
     {
         readonly SpreadsheetDocument _document;
@@ -56,15 +78,15 @@ namespace Excel.Report.PDF
             return workSheetPart;
         }
 
-        internal List<List<CellInfo>> GetCellInfo(int sheetPosition, double pdfWidthSrc, double pdfHeightSrc, out double scaling)
-            => GetCellInfo(Workbook.Worksheet(sheetPosition), GetWorkSheetPartByPosition(sheetPosition), pdfWidthSrc, pdfHeightSrc, out scaling);
+        internal List<List<CellInfo>> GetCellInfo(int sheetPosition, double pdfWidthSrc, double pdfHeightSrc, out double scaling, PageBreakInfo? pageBreakInfo = null)
+            => GetCellInfo(Workbook.Worksheet(sheetPosition), GetWorkSheetPartByPosition(sheetPosition), pdfWidthSrc, pdfHeightSrc, out scaling, pageBreakInfo);
 
-        internal List<List<CellInfo>> GetCellInfo(string sheetName, double pdfWidthSrc, double pdfHeightSrc, out double scaling)
-            => GetCellInfo(Workbook.Worksheet(sheetName), GetWorkSheetPartByName(sheetName), pdfWidthSrc, pdfHeightSrc, out scaling);
+        internal List<List<CellInfo>> GetCellInfo(string sheetName, double pdfWidthSrc, double pdfHeightSrc, out double scaling, PageBreakInfo? pageBreakInfo = null)
+            => GetCellInfo(Workbook.Worksheet(sheetName), GetWorkSheetPartByName(sheetName), pdfWidthSrc, pdfHeightSrc, out scaling, pageBreakInfo);
 
-        List<List<CellInfo>> GetCellInfo(IXLWorksheet ws, WorksheetPart worksheetPart, double pdfWidthSrc, double pdfHeightSrc, out double scaling)
+        List<List<CellInfo>> GetCellInfo(IXLWorksheet ws, WorksheetPart worksheetPart, double pdfWidthSrc, double pdfHeightSrc, out double scaling, PageBreakInfo? pageBreakInfo = null)
             => GetCellInfo(ws.PageSetup, pdfWidthSrc, pdfHeightSrc,
-                GetPageRanges(ws, worksheetPart), ws.MergedRanges.ToArray(), ws.Pictures.OfType<IXLPicture>().ToArray(), out scaling);
+                GetPageRanges(ws, worksheetPart, pageBreakInfo), ws.MergedRanges.ToArray(), ws.Pictures.OfType<IXLPicture>().ToArray(), out scaling);
 
         internal XPen ConvertToXPen(XLBorderStyleValues borderStyle, XLColor? color, double scale)
         {
@@ -263,11 +285,142 @@ namespace Excel.Report.PDF
             internal double Width { get; set; }
         }
 
-        IXLRange[] GetPageRanges(IXLWorksheet ws, WorksheetPart worksheetPart)
+        internal void GetPageRanges(IXLWorksheet ws, int sheetPos, PageBreakInfo? pageBreakInfo = null)
+            =>GetPageRanges(ws, GetWorkSheetPartByPosition(sheetPos), pageBreakInfo);
+
+        IXLRange[] GetPageRanges(IXLWorksheet ws, WorksheetPart worksheetPart, PageBreakInfo? pageBreakInfo = null)
         {
             GetSheetMaxRowCol(worksheetPart, out var maxRow, out var maxColumn);
             if (maxRow == 0 || maxColumn == 0) return new IXLRange[0];
 
+            if (pageBreakInfo == null)
+            {
+                return GetPageRangesByExcelOrder(ws, maxRow, maxColumn);
+            }
+            else 
+            {
+                if (pageBreakInfo.RowCount > 0)
+                {
+                    return GetPageRangesByRowColCount(ws, pageBreakInfo.RowCount, pageBreakInfo.ColumnCount, maxRow, maxColumn);
+                }
+                else
+                {
+                    return GetPageRangesBySize(ws, pageBreakInfo.PageHeight, pageBreakInfo.PageWidth, maxRow, maxColumn);
+                }
+            }           
+        }
+
+        private IXLRange[] GetPageRangesByRowColCount(IXLWorksheet ws, int pageBreakRowCount, int pageBreakColCount, int maxRow, int maxColumn)
+        {
+            // Setting page breaks (Rows)
+            var rowRanges = new List<StartEnd>();
+
+            for (var i = 1; i <= maxRow; i += pageBreakRowCount)
+            {
+                rowRanges.Add(new StartEnd { Start = i, End = Math.Min(i + pageBreakRowCount - 1, maxRow) });
+            }
+
+            // Setting page breaks (columns)
+            var colRanges = new List<StartEnd>();
+
+            for (var i = 1; i <= maxColumn; i += pageBreakColCount)
+            {
+                colRanges.Add(new StartEnd { Start = i, End = Math.Min(i + pageBreakColCount - 1, maxColumn) });
+            }
+
+            var list = new List<IXLRange>();
+            foreach (var row in rowRanges)
+            {
+                foreach (var col in colRanges)
+                {
+                    list.Add(ws.Range(row.Start, col.Start, row.End, col.End));
+                }
+            }
+            return list.ToArray();
+        }
+
+        private IXLRange[] GetPageRangesBySize(IXLWorksheet ws, double pageBreakHeight, double pageBreakWidth, int maxRow, int maxColumn)
+        {
+            // Set page break (height)
+            var rowRanges = new List<StartEnd>();
+            var pageStartRowNumber = 0;
+            double totalHeight = 0;
+
+            for (int i = 1; i <= maxRow; i++)
+            {
+                var row = ws.Row(i);
+
+                // Get the row height
+                double rowHeight = row.Height;
+                totalHeight += rowHeight;
+
+                if(pageStartRowNumber == 0)
+                {
+                    pageStartRowNumber = i;
+                }
+
+                // Insert a page break when the cumulative height exceeds the specified value
+                if (totalHeight >= pageBreakHeight)
+                {
+                    rowRanges.Add(new StartEnd { Start = pageStartRowNumber, End = i });
+
+                    // After page break, reset cumulative height and pageStartRowNumber
+                    totalHeight = 0;
+                    pageStartRowNumber = 0;
+                } 
+            }
+            if(0 < pageStartRowNumber)
+            {
+                rowRanges.Add(new StartEnd { Start = pageStartRowNumber, End = maxRow });
+            }
+
+            // Set page break (Width)
+            var colRanges = new List<StartEnd>();
+            var pageStartColNumber = 1;
+            double totalWidth = 0;
+
+            for (int i = 1; i <= maxColumn; i++)
+            {
+                var col = ws.Column(i);
+
+                // Get the column width
+                double colWidth = col.Width;
+                totalWidth += colWidth;
+
+                if(pageStartColNumber == 0)
+                { 
+                    pageStartColNumber = i; 
+                }
+
+                // Insert a page break when the cumulative width exceeds the specified value
+                if (totalWidth >= pageBreakWidth)
+                {
+                    colRanges.Add(new StartEnd { Start = pageStartColNumber, End = i });
+
+                    // After page break, reset cumulative width and pageStartColNumber
+                    totalWidth = 0;
+                    pageStartColNumber = 0;
+                }
+            }
+            if (0 < pageStartColNumber)
+            {
+                colRanges.Add(new StartEnd { Start = pageStartColNumber, End = maxColumn });
+            }
+
+            var list = new List<IXLRange>();
+            foreach (var row in rowRanges)
+            {
+                foreach (var col in colRanges)
+                {
+                    list.Add(ws.Range(row.Start, col.Start, row.End, col.End));
+                }
+            }
+            return list.ToArray();
+        }
+
+
+        private static IXLRange[] GetPageRangesByExcelOrder(IXLWorksheet ws, int maxRow, int maxColumn)
+        {
             var rowRanges = new List<StartEnd>();
             var rowIndex = 1;
             for (int i = 0; i < ws.PageSetup.RowBreaks.Count; i++)
@@ -307,33 +460,75 @@ namespace Excel.Report.PDF
             return list.ToArray();
         }
 
-        static void GetSheetMaxRowCol(WorksheetPart worksheetPart, out int maxRow, out int maxColumn)
+        internal void GetSheetMaxRowCol(int sheetPos, out int maxRow, out int maxColumn)
+            => GetSheetMaxRowCol(GetWorkSheetPartByPosition(sheetPos), out maxRow, out maxColumn);
+
+        void GetSheetMaxRowCol(WorksheetPart worksheetPart, out int maxRow, out int maxColumn)
         {
-            var reference = worksheetPart.Worksheet.SheetDimension?.Reference?.Value;
-            if (reference == null) throw new InvalidDataException("Invalid SheetDimension");
-            var referenceParts = reference.Split(':');
-            var endReference = referenceParts.Length == 2 ? referenceParts[1]:
-                referenceParts.Length == 1?  referenceParts[0] : null;
-            if (endReference == null) throw new InvalidDataException("Invalid SheetDimension");
-            maxRow = GetRowIndex(endReference);
-            maxColumn = GetColumnIndex(endReference);
+            // 1. Enumerate all rows and cells
+            var rows = worksheetPart.Worksheet.Descendants<Row>();
+
+            if (!rows.Any())
+            {
+                maxRow = 0;
+                maxColumn = 0;
+                return;
+            }
+
+            // 2. Calculate the minimum and maximum range
+            uint uintMaxRow = rows.Max(r => r.RowIndex) ?? 0;
+            maxRow = (int)uintMaxRow;
+
+            maxColumn = int.MinValue;
+            foreach (var row in rows)
+            {
+                var cells = row.Elements<Cell>();
+                foreach (var cell in cells)
+                {
+                    var cellReference = cell.CellReference;
+                    if (!string.IsNullOrEmpty(cell.CellReference))
+                    {
+                        int columnIndex = GetColumnIndex(cell.CellReference);
+                        if (columnIndex > maxColumn) maxColumn = columnIndex;
+                    }
+                }
+            }
+
+            // 3. If the column does not exist
+            if (maxColumn == int.MinValue)
+            {
+                maxColumn = 1; // Column A
+            }
         }
 
-        static int GetRowIndex(string cellReference)
-            => int.Parse(new string(cellReference.Where(char.IsDigit).ToArray()));
-
-        static int GetColumnIndex(string cellReference)
+        // Get column number from cell reference
+        static int GetColumnIndex(string? cellReference)
         {
-            var columnName = new string(cellReference.Where(char.IsLetter).ToArray());
-            int columnNumber = 0;
-            int multiplier = 1;
-
-            foreach (char c in columnName.ToUpper().Reverse())
+            if (string.IsNullOrEmpty(cellReference))
             {
-                columnNumber += multiplier * ((c - 'A') + 1);
-                multiplier *= 26;
+                return 0;
             }
-            return columnNumber;
+
+            var colPart = new string(cellReference.Where(char.IsLetter).ToArray());
+            int colIndex = 0;
+            foreach (char c in colPart)
+            {
+                colIndex = (colIndex * 26) + (c - 'A' + 1);
+            }
+            return colIndex;
+        }
+
+        // Get column name from column number
+        static string GetColumnName(int columnIndex)
+        {
+            var columnName = string.Empty;
+            while (columnIndex > 0)
+            {
+                var remainder = (columnIndex - 1) % 26;
+                columnName = (char)(remainder + 'A') + columnName;
+                columnIndex = (columnIndex - remainder - 1) / 26;
+            }
+            return columnName;
         }
 
         internal static double PixelToPoint(double src)
