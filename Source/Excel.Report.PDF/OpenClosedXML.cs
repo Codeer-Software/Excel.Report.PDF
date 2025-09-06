@@ -518,19 +518,6 @@ namespace Excel.Report.PDF
             return colIndex;
         }
 
-        // Get column name from column number
-        static string GetColumnName(int columnIndex)
-        {
-            var columnName = string.Empty;
-            while (columnIndex > 0)
-            {
-                var remainder = (columnIndex - 1) % 26;
-                columnName = (char)(remainder + 'A') + columnName;
-                columnIndex = (columnIndex - remainder - 1) / 26;
-            }
-            return columnName;
-        }
-
         internal static double PixelToPoint(double src)
             => src * (72.0 / 96.0);
 
@@ -541,7 +528,25 @@ namespace Excel.Report.PDF
             => PixelToPoint(ColumnWithToPixel(columnWidth));
 
         static double ColumnWithToPixel(double columnWidth)
-            => columnWidth * 8.0 + 5.0;
+        {
+            // Excel Maximum Digit Width (MDW). For your case (aiming for 97 px), MDW = 8 fits.
+            // If it comes out 1–2 px smaller with the default Calibri 11, change it to 7 and verify.
+            const double mdw = 8;
+
+            // Left/right cell padding: 2*CEILING(MDW/4)+1
+            double pp = 2 * (double)Math.Ceiling(mdw / 4.0) + 1;
+
+            if (columnWidth < 1.0)
+            {
+                // Nonlinear region for NoC < 1
+                return Math.Floor(columnWidth * (mdw + pp) + 0.5);
+            }
+
+            // Excel-compliant: round to 1/256 of a character, multiply by MDW,
+            // then add 0.5 and round
+            double noc256 = (256.0 * columnWidth + Math.Round(128.0 / mdw)) / 256.0;
+            return Math.Floor(noc256 * mdw + 0.5) + pp;
+        }
 
         static List<List<CellInfo>> GetCellInfo(
             IXLPageSetup pageSetup, double pdfWidthSrc, double pdfHeightSrc,

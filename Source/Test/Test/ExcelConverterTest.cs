@@ -51,6 +51,12 @@ namespace Test
         public void Testmultipage() => Convert("multipagetest");
 
         [Test]
+        public void TestDirectionMarginScaling() => Convert("TestDirectionMarginScaling");
+
+        [Test]
+        public void TestMarginScaling() => Convert("TestMarginScaling");
+
+        [Test]
         public void PageBreakRowColTest()
         {
             var pageBreakInfo = PageBreakInfo.CreateRowColumnPageBreak(15, 5);
