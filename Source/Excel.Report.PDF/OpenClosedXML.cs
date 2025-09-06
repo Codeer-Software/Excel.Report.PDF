@@ -525,9 +525,9 @@ namespace Excel.Report.PDF
             => inch * 72;
 
         static double ColumnWidthToPoint(double columnWidth)
-            => PixelToPoint(ColumnWithToPixel(columnWidth));
+            => PixelToPoint(ColumnWidthToPixel(columnWidth));
 
-        static double ColumnWithToPixel(double columnWidth)
+        static double ColumnWidthToPixel(double columnWidth)
         {
             // Excel Maximum Digit Width (MDW). For your case (aiming for 97 px), MDW = 8 fits.
             // If it comes out 1–2 px smaller with the default Calibri 11, change it to 7 and verify.
