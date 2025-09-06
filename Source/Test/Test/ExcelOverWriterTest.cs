@@ -47,7 +47,7 @@ namespace Test
         [OneTimeSetUp]
         public void OneTimeSetUp()
         {
-            GlobalFontSettings.FontResolver = new CustomFontResolver();
+            if (GlobalFontSettings.FontResolver == null) GlobalFontSettings.FontResolver = new CustomFontResolver();
 
             if (Directory.Exists(TestEnvironment.TestResultsPath))
             {
