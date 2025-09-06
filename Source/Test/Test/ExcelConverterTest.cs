@@ -45,6 +45,9 @@ namespace Test
         public void Test9() => Convert("Test9");
 
         [Test]
+        public void TestMargin() => Convert("TestMargin");
+
+        [Test]
         public void Testmultipage() => Convert("multipagetest");
 
         [Test]
