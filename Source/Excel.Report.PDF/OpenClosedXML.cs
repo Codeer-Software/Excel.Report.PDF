@@ -539,13 +539,13 @@ namespace Excel.Report.PDF
             if (columnWidth < 1.0)
             {
                 // Nonlinear region for NoC < 1
-                return Math.Floor(columnWidth * (mdw + pp) + 0.5);
+                return columnWidth * (mdw + pp);
             }
 
             // Excel-compliant: round to 1/256 of a character, multiply by MDW,
             // then add 0.5 and round
             double noc256 = (256.0 * columnWidth + Math.Round(128.0 / mdw)) / 256.0;
-            return Math.Floor(noc256 * mdw + 0.5) + pp;
+            return noc256 * mdw + pp;
         }
 
         static List<List<CellInfo>> GetCellInfo(
