@@ -1,6 +1,7 @@
 ﻿using ClosedXML.Excel;
 using PdfSharp.Drawing;
 using PdfSharp.Pdf;
+
 namespace Excel.Report.PDF
 {
     public class ExcelConverter : IDisposable
@@ -144,50 +145,78 @@ namespace Excel.Report.PDF
             }
         }
 
+        enum Side { Top, Right, Bottom, Left }
         void DrawRuledLine(DrawLineCache gfx, double scaling, CellInfo cellInfo)
         {
             var cell = cellInfo.Cell!;
 
-            static bool IsDrawTop(CellInfo cellInfo)
+            static bool IsDrawTop(CellInfo info)
+                => info.MergedFirstCell == null || info.Cell?.Address.RowNumber == info.MergedFirstCell.Cell?.Address.RowNumber;
+            static bool IsDrawLeft(CellInfo info)
+                => info.MergedFirstCell == null || info.Cell?.Address.ColumnNumber == info.MergedFirstCell.Cell?.Address.ColumnNumber;
+            static bool IsDrawBottom(CellInfo info)
+                => info.MergedLastCell == null || info.Cell?.Address.RowNumber == info.MergedLastCell.Cell?.Address.RowNumber;
+            static bool IsDrawRight(CellInfo info)
+                => info.MergedLastCell == null || info.Cell?.Address.ColumnNumber == info.MergedLastCell.Cell?.Address.ColumnNumber;
+
+            void DrawSide(
+                XLBorderStyleValues style, XLColor color, Side side,
+                double x1, double y1, double x2, double y2, bool shouldDraw)
             {
-                if (cellInfo.MergedFirstCell == null) return true;
-                return cellInfo.Cell?.Address.RowNumber == cellInfo.MergedFirstCell.Cell?.Address.RowNumber;
+                if (!shouldDraw || style == XLBorderStyleValues.None) return;
+
+                if (style == XLBorderStyleValues.Double)
+                { 
+                    // Double means "draw two thin lines, spacing = thin line width"
+                    var thinPen = _openClosedXML.ConvertToXPen(XLBorderStyleValues.Thin, color, scaling);
+                    double step = thinPen.Width * 2.0; // center-to-center
+                    
+                    // First line: on the default border line
+                    gfx.DrawLine(thinPen, x1, y1, x2, y2);
+
+                    // Second line: offset toward inside of the cell
+                    switch (side)
+                    {
+                        case Side.Top:
+                            gfx.DrawLine(thinPen, x1, y1 + step, x2, y2 + step);
+                            break;
+                        case Side.Bottom:
+                            gfx.DrawLine(thinPen, x1, y1 - step, x2, y2 - step);
+                            break;
+                        case Side.Left:
+                            gfx.DrawLine(thinPen, x1 + step, y1, x2 + step, y2);
+                            break;
+                        case Side.Right:
+                            gfx.DrawLine(thinPen, x1 - step, y1, x2 - step, y2);
+                            break;
+                    }
+                    return;
+                }
+
+                // Normal lines (Thin/Medium/Thick/Hair, etc.)
+                var pen = _openClosedXML.ConvertToXPen(style, color, scaling);
+                gfx.DrawLine(pen, x1, y1, x2, y2);
             }
 
-            static bool IsDrawLeft(CellInfo cellInfo)
-            {
-                if (cellInfo.MergedFirstCell == null) return true;
-                return cellInfo.Cell?.Address.ColumnNumber == cellInfo.MergedFirstCell.Cell?.Address.ColumnNumber;
-            }
+            // top
+            DrawSide(
+                cell.Style.Border.TopBorder, cell.Style.Border.TopBorderColor, Side.Top,
+                cellInfo.X, cellInfo.Y, cellInfo.X + cellInfo.Width, cellInfo.Y, IsDrawTop(cellInfo));
 
-            static bool IsDrawBottom(CellInfo cellInfo)
-            {
-                if (cellInfo.MergedLastCell == null) return true;
-                return cellInfo.Cell?.Address.RowNumber == cellInfo.MergedLastCell.Cell?.Address.RowNumber;
-            }
+            // right
+            DrawSide(
+                cell.Style.Border.RightBorder, cell.Style.Border.RightBorderColor, Side.Right,
+                cellInfo.X + cellInfo.Width, cellInfo.Y, cellInfo.X + cellInfo.Width, cellInfo.Y + cellInfo.Height, IsDrawRight(cellInfo));
 
-            static bool IsDrawRight(CellInfo cellInfo)
-            {
-                if (cellInfo.MergedLastCell == null) return true;
-                return cellInfo.Cell?.Address.ColumnNumber == cellInfo.MergedLastCell.Cell?.Address.ColumnNumber;
-            }
+            // bottom
+            DrawSide(
+                cell.Style.Border.BottomBorder, cell.Style.Border.BottomBorderColor, Side.Bottom,
+                cellInfo.X + cellInfo.Width, cellInfo.Y + cellInfo.Height, cellInfo.X, cellInfo.Y + cellInfo.Height, IsDrawBottom(cellInfo));
 
-            if (cell.Style.Border.TopBorder != XLBorderStyleValues.None && IsDrawTop(cellInfo))
-            {
-                gfx.DrawLine(_openClosedXML.ConvertToXPen(cell.Style.Border.TopBorder, cell.Style.Border.TopBorderColor, scaling), cellInfo.X, cellInfo.Y, cellInfo.X + cellInfo.Width, cellInfo.Y);
-            }
-            if (cell.Style.Border.RightBorder != XLBorderStyleValues.None && IsDrawRight(cellInfo))
-            {
-                gfx.DrawLine(_openClosedXML.ConvertToXPen(cell.Style.Border.RightBorder, cell.Style.Border.RightBorderColor, scaling), cellInfo.X + cellInfo.Width, cellInfo.Y, cellInfo.X + cellInfo.Width, cellInfo.Y + cellInfo.Height);
-            }
-            if (cell.Style.Border.BottomBorder != XLBorderStyleValues.None && IsDrawBottom(cellInfo))
-            {
-                gfx.DrawLine(_openClosedXML.ConvertToXPen(cell.Style.Border.BottomBorder, cell.Style.Border.BottomBorderColor, scaling), cellInfo.X + cellInfo.Width, cellInfo.Y + cellInfo.Height, cellInfo.X, cellInfo.Y + cellInfo.Height);
-            }
-            if (cell.Style.Border.LeftBorder != XLBorderStyleValues.None && IsDrawLeft(cellInfo))
-            {
-                gfx.DrawLine(_openClosedXML.ConvertToXPen(cell.Style.Border.LeftBorder, cell.Style.Border.LeftBorderColor, scaling), cellInfo.X, cellInfo.Y + cellInfo.Height, cellInfo.X, cellInfo.Y);
-            }
+            // left
+            DrawSide(
+                cell.Style.Border.LeftBorder, cell.Style.Border.LeftBorderColor, Side.Left,
+                cellInfo.X, cellInfo.Y + cellInfo.Height, cellInfo.X, cellInfo.Y, IsDrawLeft(cellInfo));
         }
 
         void DrawCellText(XGraphics gfx, double scaling, CellInfo cellInfo)
@@ -212,10 +241,10 @@ namespace Excel.Report.PDF
                             format.Alignment = XStringAlignment.Far;
                             break;
                         case XLDataType.Boolean:
-                            format.Alignment = XStringAlignment.Center;
+                            format.Alignment = XStringAlignment.Center; 
                             break;
                         default:
-                            format.Alignment = XStringAlignment.Near;
+                            format.Alignment = XStringAlignment.Near; 
                             break;
                     }
                     break;
@@ -226,7 +255,7 @@ namespace Excel.Report.PDF
                     format.LineAlignment = XLineAlignment.Center;
                     break;
                 case XLAlignmentVerticalValues.Bottom:
-                    format.LineAlignment = XLineAlignment.Far;
+                    format.LineAlignment = XLineAlignment.Far; 
                     break;
                 default:
                     format.LineAlignment = XLineAlignment.Near;
@@ -239,36 +268,121 @@ namespace Excel.Report.PDF
             if (cell.Style.Font.Bold) fontStyle |= XFontStyleEx.Bold;
             if (cell.Style.Font.Italic) fontStyle |= XFontStyleEx.Italic;
             if (cell.Style.Font.Underline != XLFontUnderlineValues.None) fontStyle |= XFontStyleEx.Underline;
-            XFont font = new XFont(cell.Style.Font.FontName, fontSize * scaling, fontStyle);
+            var font = new XFont(cell.Style.Font.FontName, fontSize * scaling, fontStyle);
 
             var text = cell.GetFormattedString();
             var xFontColor = _openClosedXML.ChangeColor(cell.Style.Font.FontColor) ?? XColor.FromArgb(255, 0, 0, 0);
+            var brush = new XSolidBrush(xFontColor);
 
-            var w = cellInfo.MergedWidth != 0 ? cellInfo.MergedWidth : cellInfo.Width;
-            var h = cellInfo.MergedHeight != 0 ? cellInfo.MergedHeight : cellInfo.Height;
+            double w = cellInfo.MergedWidth != 0 ? cellInfo.MergedWidth : cellInfo.Width;
+            double h = cellInfo.MergedHeight != 0 ? cellInfo.MergedHeight : cellInfo.Height;
 
-            var CellPadding = OpenClosedXML.PixelToPoint(fontSize * (1.0/4.0));
-            var offset = CellPadding * scaling;
-            if (offset * 2 < w) w = w - offset * 2;
-            if (offset * 2 < h) h = h - offset * 2;
+            // Excel-like padding
+            var cellPaddingPt = OpenClosedXML.PixelToPoint(fontSize * (1.0 / 4.0));
+            var offset = cellPaddingPt * scaling;
+            if (offset * 2 < w) w -= offset * 2;
+            if (offset * 2 < h) h -= offset * 2;
+
+            var rect = new XRect(cellInfo.X + offset, cellInfo.Y + offset, w, h);
 
             var lines = text.Split(new[] { "\r\n", "\n" }, StringSplitOptions.None);
-            var xRect = new XRect(cellInfo.X + offset, cellInfo.Y + offset, w, h);
 
-            var startY = xRect.Y;
+            // ===== Rotation & vertical text =====
+            int raw = cell.Style.Alignment.TextRotation;
+
+            if (raw == 255)
+            {
+                // Excel's "Vertical Text" (stack)
+                DrawVerticalStack(gfx, font, brush, rect, format, lines);
+                return;
+            }
+
+            // Excel (0..90 = counterclockwise / 91..180 = clockwise (= negative angle))
+            // PDFsharp uses positive angles as clockwise, so map as follows
+            int anglePdf = 0;
+            if (raw <= 90) anglePdf = -raw;        // Up-left slant (Excel +) → negative angle in PDF
+            else anglePdf = 180 - raw;    // Up-right slant (Excel -) → positive angle in PDF
+
+            if (anglePdf != 0)
+            {
+                DrawRotated(gfx, font, brush, rect, format, lines, anglePdf);
+                return;
+            }
+
+            // ===== Horizontal text (no rotation) =====
+            double startY = rect.Y;
             if (format.LineAlignment == XLineAlignment.Center)
-            {
-                startY += (h - lines.Length * font.Height) / 2;
-            }
+                startY += (rect.Height - lines.Length * font.Height) / 2.0;
             else if (format.LineAlignment == XLineAlignment.Far)
-            {
-                startY += h - lines.Length * font.Height;
-            }
+                startY += rect.Height - lines.Length * font.Height;
 
             foreach (var line in lines)
             {
-                gfx.DrawString(line, font, new XSolidBrush(xFontColor), new XRect(xRect.X, startY, w, font.Height), format);
+                gfx.DrawString(line, font, brush, new XRect(rect.X, startY, rect.Width, font.Height), format);
                 startY += font.Height;
+            }
+
+            // ======== Local functions ========
+
+            // Vertical writing (Excel stack): place characters top→bottom, advance columns left→right
+            void DrawVerticalStack(XGraphics g, XFont f, XBrush b, XRect r, XStringFormat fmt, string[] cols)
+            {
+                double step = f.Height;                 // one cell
+                double totalW = cols.Length * step;
+
+                double startX = r.X;
+                if (fmt.Alignment == XStringAlignment.Center)
+                    startX += Math.Max(0, (r.Width - totalW) / 2.0);
+                else if (fmt.Alignment == XStringAlignment.Far)
+                    startX += Math.Max(0, r.Width - totalW);
+
+                var charFmt = new XStringFormat { Alignment = XStringAlignment.Center, LineAlignment = XLineAlignment.Near };
+
+                for (int c = 0; c < cols.Length; c++)
+                {
+                    string col = cols[c] ?? string.Empty;
+                    double colH = col.Length * step;
+
+                    double y = r.Y;
+                    if (fmt.LineAlignment == XLineAlignment.Center)
+                        y += Math.Max(0, (r.Height - colH) / 2.0);
+                    else if (fmt.LineAlignment == XLineAlignment.Far)
+                        y += Math.Max(0, r.Height - colH);
+
+                    double x = startX + c * step;
+
+                    for (int i = 0; i < col.Length; i++)
+                    {
+                        string ch = col.Substring(i, 1);
+                        g.DrawString(ch, f, b, new XRect(x, y + i * step, step, step), charFmt);
+                    }
+                }
+            }
+
+            // Arbitrary-angle drawing: rotate the coordinate system around the rectangle center (do not swap width/height)
+            void DrawRotated(XGraphics g, XFont f, XBrush b, XRect r, XStringFormat fmt, string[] content, int angle)
+            {
+                g.Save();
+
+                // Rotate about the center (PDFsharp uses positive = clockwise)
+                g.TranslateTransform(r.X + r.Width / 2.0, r.Y + r.Height / 2.0);
+                g.RotateTransform(angle);
+
+                var rr = new XRect(-r.Width / 2.0, -r.Height / 2.0, r.Width, r.Height);
+
+                double y = rr.Y;
+                if (fmt.LineAlignment == XLineAlignment.Center)
+                    y += (rr.Height - content.Length * f.Height) / 2.0;
+                else if (fmt.LineAlignment == XLineAlignment.Far)
+                    y += rr.Height - content.Length * f.Height;
+
+                foreach (var line in content)
+                {
+                    g.DrawString(line, f, b, new XRect(rr.X, y, rr.Width, f.Height), fmt);
+                    y += f.Height;
+                }
+
+                g.Restore();
             }
         }
 

@@ -57,6 +57,12 @@ namespace Test
         public void TestMarginScaling() => Convert("TestMarginScaling");
 
         [Test]
+        public void TestDoubleLine() => Convert("TestDoubleLine");
+
+        [Test]
+        public void TestVirticalText() => Convert("TestVirticalText");
+
+        [Test]
         public void PageBreakRowColTest()
         {
             var pageBreakInfo = PageBreakInfo.CreateRowColumnPageBreak(15, 5);
