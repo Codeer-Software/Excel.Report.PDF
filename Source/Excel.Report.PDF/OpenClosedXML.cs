@@ -36,11 +36,11 @@ namespace Excel.Report.PDF
 
         internal XLWorkbook Workbook { get; }
 
-        internal bool IsLandscape(int sheetPosition)
-            => Workbook.Worksheet(sheetPosition).PageSetup.PageOrientation == XLPageOrientation.Landscape;
+        internal IXLPageSetup GetPageSetup(int sheetPosition)
+            => Workbook.Worksheet(sheetPosition).PageSetup;
 
-        internal bool IsLandscape(string sheetName)
-            => Workbook.Worksheet(sheetName).PageSetup.PageOrientation == XLPageOrientation.Landscape;
+        internal IXLPageSetup GetPageSetup(string sheetName)
+            => Workbook.Worksheet(sheetName).PageSetup;
 
         internal OpenClosedXML(Stream stream)
         {

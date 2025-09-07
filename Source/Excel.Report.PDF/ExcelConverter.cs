@@ -54,10 +54,10 @@ namespace Excel.Report.PDF
         {
             using (var pdf = new PdfDocument())
             {
-                var page = pdf.AddPageEx();
-                if (_openClosedXML.IsLandscape(sheetPosition)) page.Orientation = PdfSharp.PageOrientation.Landscape;
+                var ps = _openClosedXML.GetPageSetup(sheetPosition);
+                var page = pdf.AddPageEx(ps);
                 var allCells = _openClosedXML.GetCellInfo(sheetPosition, page.Width.Point, page.Height.Point, out var scaling, pageBreakInfo);
-                return DrawPdf(pdf, page, allCells, scaling);
+                return DrawPdf(ps, pdf, page, allCells, scaling);
             }
         }
 
@@ -65,19 +65,19 @@ namespace Excel.Report.PDF
         {
             using (var pdf = new PdfDocument())
             {
-                var page = pdf.AddPageEx();
-                if (_openClosedXML.IsLandscape(sheetName)) page.Orientation = PdfSharp.PageOrientation.Landscape;
+                var ps = _openClosedXML.GetPageSetup(sheetName);
+                var page = pdf.AddPageEx(ps);
                 var allCells = _openClosedXML.GetCellInfo(sheetName, page.Width.Point, page.Height.Point, out var scaling, pageBreakInfo);
-                return DrawPdf(pdf, page, allCells, scaling);
+                return DrawPdf(ps, pdf, page, allCells, scaling);
             }
         }
 
-        MemoryStream DrawPdf(PdfDocument pdf, PdfPage pageSrc, List<List<CellInfo>> allCells, double scaling)
+        MemoryStream DrawPdf(IXLPageSetup ps, PdfDocument pdf, PdfPage pageSrc, List<List<CellInfo>> allCells, double scaling)
         {
             PdfPage? page = pageSrc;
             for (int i = 0; i < allCells.Count; i++)
             {
-                if (page == null) page = pdf.AddPageEx();
+                if (page == null) page = pdf.AddPageEx(ps);
                 using var gfx = XGraphics.FromPdfPage(page);
                 page = null;
                 var drawLineCache = new DrawLineCache(gfx);
