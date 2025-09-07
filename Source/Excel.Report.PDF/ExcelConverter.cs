@@ -146,74 +146,135 @@ namespace Excel.Report.PDF
         }
 
         enum Side { Top, Right, Bottom, Left }
+
         void DrawRuledLine(DrawLineCache gfx, double scaling, CellInfo cellInfo)
         {
             var cell = cellInfo.Cell!;
 
-            static bool IsDrawTop(CellInfo info)
-                => info.MergedFirstCell == null || info.Cell?.Address.RowNumber == info.MergedFirstCell.Cell?.Address.RowNumber;
-            static bool IsDrawLeft(CellInfo info)
-                => info.MergedFirstCell == null || info.Cell?.Address.ColumnNumber == info.MergedFirstCell.Cell?.Address.ColumnNumber;
-            static bool IsDrawBottom(CellInfo info)
-                => info.MergedLastCell == null || info.Cell?.Address.RowNumber == info.MergedLastCell.Cell?.Address.RowNumber;
-            static bool IsDrawRight(CellInfo info)
-                => info.MergedLastCell == null || info.Cell?.Address.ColumnNumber == info.MergedLastCell.Cell?.Address.ColumnNumber;
+            // Draw guards for merged ranges
+            static bool IsDrawTop(CellInfo i) => i.MergedFirstCell == null || i.Cell?.Address.RowNumber == i.MergedFirstCell.Cell?.Address.RowNumber;
+            static bool IsDrawLeft(CellInfo i) => i.MergedFirstCell == null || i.Cell?.Address.ColumnNumber == i.MergedFirstCell.Cell?.Address.ColumnNumber;
+            static bool IsDrawBottom(CellInfo i) => i.MergedLastCell == null || i.Cell?.Address.RowNumber == i.MergedLastCell.Cell?.Address.RowNumber;
+            static bool IsDrawRight(CellInfo i) => i.MergedLastCell == null || i.Cell?.Address.ColumnNumber == i.MergedLastCell.Cell?.Address.ColumnNumber;
+
+            // ---- Border precedence like Excel (higher wins on shared edges)
+            static int Rank(XLBorderStyleValues s) => s switch
+            {
+                XLBorderStyleValues.Double => 500,
+                XLBorderStyleValues.Thick => 400,
+                XLBorderStyleValues.Medium => 300,
+                XLBorderStyleValues.MediumDashed => 300,
+                XLBorderStyleValues.MediumDashDot => 300,
+                XLBorderStyleValues.MediumDashDotDot => 300,
+                XLBorderStyleValues.Thin => 200,
+                XLBorderStyleValues.Dashed => 200,
+                XLBorderStyleValues.Dotted => 200,
+                XLBorderStyleValues.DashDot => 200,
+                XLBorderStyleValues.DashDotDot => 200,
+                XLBorderStyleValues.Hair => 100,
+                _ => 0
+            };
+
+            // Get the neighbor's opposite border on the shared edge
+            static XLBorderStyleValues NeighborStyle(IXLCell me, Side side, out XLColor color)
+            {
+                var ws = me.Worksheet;
+                int r = me.Address.RowNumber;
+                int c = me.Address.ColumnNumber;
+                color = XLColor.Black;
+
+                IXLCell? nb = null;
+                XLBorderStyleValues s = XLBorderStyleValues.None;
+
+                switch (side)
+                {
+                    case Side.Left:
+                        if (c > 1) nb = ws.Cell(r, c - 1);
+                        if (nb != null) { s = nb.Style.Border.RightBorder; color = nb.Style.Border.RightBorderColor; }
+                        break;
+                    case Side.Right:
+                        nb = ws.Cell(r, c + 1);
+                        if (nb != null) { s = nb.Style.Border.LeftBorder; color = nb.Style.Border.LeftBorderColor; }
+                        break;
+                    case Side.Top:
+                        if (r > 1) nb = ws.Cell(r - 1, c);
+                        if (nb != null) { s = nb.Style.Border.BottomBorder; color = nb.Style.Border.BottomBorderColor; }
+                        break;
+                    case Side.Bottom:
+                        nb = ws.Cell(r + 1, c);
+                        if (nb != null) { s = nb.Style.Border.TopBorder; color = nb.Style.Border.TopBorderColor; }
+                        break;
+                }
+                return s;
+            }
+
+            // Decide whether we should draw this shared edge
+            static bool ShouldDrawShared(IXLCell me, Side side, XLBorderStyleValues myStyle)
+            {
+                var nbStyle = NeighborStyle(me, side, out _);
+                int myRank = Rank(myStyle);
+                int nbRank = Rank(nbStyle);
+
+                if (myRank > nbRank) return true;               // we win -> draw
+                if (myRank < nbRank) return false;              // we lose -> skip
+
+                // tie: draw only for Right/Bottom to avoid double painting
+                return side == Side.Right || side == Side.Bottom;
+            }
 
             void DrawSide(
                 XLBorderStyleValues style, XLColor color, Side side,
-                double x1, double y1, double x2, double y2, bool shouldDraw)
+                double x1, double y1, double x2, double y2, bool guard)
             {
-                if (!shouldDraw || style == XLBorderStyleValues.None) return;
+                if (!guard || style == XLBorderStyleValues.None) return;
+                if (!ShouldDrawShared(cell, side, style)) return;
 
                 if (style == XLBorderStyleValues.Double)
-                { 
-                    // Double means "draw two thin lines, spacing = thin line width"
-                    var thinPen = _openClosedXML.ConvertToXPen(XLBorderStyleValues.Thin, color, scaling);
-                    double step = thinPen.Width * 2.0; // center-to-center
-                    
-                    // First line: on the default border line
-                    gfx.DrawLine(thinPen, x1, y1, x2, y2);
+                {
+                    // Excel-like "Double": two THIN strokes separated by a THIN-sized gap.
+                    // Do NOT draw a center line. That would be eaten by a neighbor single line.
+                    var thin = _openClosedXML.ConvertToXPen(XLBorderStyleValues.Thin, color, scaling);
 
-                    // Second line: offset toward inside of the cell
+                    // Ensure a visible gap on screen/PDF rasterizers
+                    double w = Math.Max(thin.Width, 0.7); // >=0.5pt guard for visibility
+
                     switch (side)
                     {
                         case Side.Top:
-                            gfx.DrawLine(thinPen, x1, y1 + step, x2, y2 + step);
-                            break;
                         case Side.Bottom:
-                            gfx.DrawLine(thinPen, x1, y1 - step, x2, y2 - step);
+                            gfx.DrawLine(thin, x1, y1 - w, x2, y2 - w);
+                            gfx.DrawLine(thin, x1, y1 + w, x2, y2 + w);
                             break;
                         case Side.Left:
-                            gfx.DrawLine(thinPen, x1 + step, y1, x2 + step, y2);
-                            break;
                         case Side.Right:
-                            gfx.DrawLine(thinPen, x1 - step, y1, x2 - step, y2);
+                            gfx.DrawLine(thin, x1 - w, y1, x2 - w, y2);
+                            gfx.DrawLine(thin, x1 + w, y1, x2 + w, y2);
                             break;
                     }
                     return;
                 }
 
-                // Normal lines (Thin/Medium/Thick/Hair, etc.)
+                // Other styles: use the normal pen
                 var pen = _openClosedXML.ConvertToXPen(style, color, scaling);
                 gfx.DrawLine(pen, x1, y1, x2, y2);
             }
 
-            // top
+            // Top
             DrawSide(
                 cell.Style.Border.TopBorder, cell.Style.Border.TopBorderColor, Side.Top,
                 cellInfo.X, cellInfo.Y, cellInfo.X + cellInfo.Width, cellInfo.Y, IsDrawTop(cellInfo));
 
-            // right
+            // Right
             DrawSide(
                 cell.Style.Border.RightBorder, cell.Style.Border.RightBorderColor, Side.Right,
                 cellInfo.X + cellInfo.Width, cellInfo.Y, cellInfo.X + cellInfo.Width, cellInfo.Y + cellInfo.Height, IsDrawRight(cellInfo));
 
-            // bottom
+            // Bottom
             DrawSide(
                 cell.Style.Border.BottomBorder, cell.Style.Border.BottomBorderColor, Side.Bottom,
                 cellInfo.X + cellInfo.Width, cellInfo.Y + cellInfo.Height, cellInfo.X, cellInfo.Y + cellInfo.Height, IsDrawBottom(cellInfo));
 
-            // left
+            // Left
             DrawSide(
                 cell.Style.Border.LeftBorder, cell.Style.Border.LeftBorderColor, Side.Left,
                 cellInfo.X, cellInfo.Y + cellInfo.Height, cellInfo.X, cellInfo.Y, IsDrawLeft(cellInfo));
