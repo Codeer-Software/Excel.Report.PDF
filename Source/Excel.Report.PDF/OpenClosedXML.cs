@@ -701,5 +701,11 @@ namespace Excel.Report.PDF
 
             return (marginX, marginY);
         }
+
+        internal List<string> GetSheetNames()
+        {
+            var sheetNames = Workbook.Worksheets.OrderBy(e => e.Position).Select(e => e.Name).ToList();
+            return sheetNames;
+        }
     }
 }

@@ -73,7 +73,32 @@ namespace Excel.Report.PDF
             }
         }
 
+        public MemoryStream ConvertToPdf(PageBreakInfo? pageBreakInfo = null)
+        {
+            using (var pdf = new PdfDocument())
+            {
+                foreach (var sheetName in _openClosedXML.GetSheetNames())
+                {
+                    var ps = _openClosedXML.GetPageSetup(sheetName);
+                    var page = pdf.AddPageEx(ps);
+                    var allCells = _openClosedXML.GetCellInfo(sheetName, page.Width.Point, page.Height.Point, out var scaling, pageBreakInfo);
+                    DrawPdfCore(ps, pdf, page, allCells, scaling);
+                }
+                var outStream = new MemoryStream();
+                pdf.Save(outStream);
+                return outStream;
+            }
+        }
+
         MemoryStream DrawPdf(IXLPageSetup ps, PdfDocument pdf, PdfPage pageSrc, List<List<CellInfo>> allCells, double scaling)
+        {
+            DrawPdfCore(ps, pdf, pageSrc, allCells, scaling);
+            var outStream = new MemoryStream();
+            pdf.Save(outStream);
+            return outStream;
+        }
+
+        void DrawPdfCore(IXLPageSetup ps, PdfDocument pdf, PdfPage pageSrc, List<List<CellInfo>> allCells, double scaling)
         {
             PdfPage? page = pageSrc;
             for (int i = 0; i < allCells.Count; i++)
@@ -110,10 +135,6 @@ namespace Excel.Report.PDF
                     DrawPictures(gfx, e);
                 }
             }
-
-            var outStream = new MemoryStream();
-            pdf.Save(outStream);
-            return outStream;
         }
 
         void FillCellBackColor(XGraphics gfx, CellInfo cellInfo)
