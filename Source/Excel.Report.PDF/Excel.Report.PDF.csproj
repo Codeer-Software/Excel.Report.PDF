@@ -14,7 +14,7 @@
     <PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
 	<PackageReleaseNotes>
 		# Adjustments
-		- Supports vertical writing and double lines.
+		- Full sheet printing available.
 	</PackageReleaseNotes>
   </PropertyGroup>
 
