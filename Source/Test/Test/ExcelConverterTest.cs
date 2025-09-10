@@ -63,6 +63,14 @@ namespace Test
         public void TestVirticalText() => Convert("TestVirticalText");
 
         [Test]
+        public void TestMultiSheet()
+        {
+            var workbookPath = Path.Combine(TestEnvironment.PdfSrcPath, "TestMultiSheet.xlsx");
+            using var outStream = ExcelConverter.ConvertToPdf(workbookPath);
+            File.WriteAllBytes(Path.Combine(TestEnvironment.TestResultsPath, "TestMultiSheet.pdf"), outStream.ToArray());
+        }
+
+        [Test]
         public void PageBreakRowColTest()
         {
             var pageBreakInfo = PageBreakInfo.CreateRowColumnPageBreak(15, 5);

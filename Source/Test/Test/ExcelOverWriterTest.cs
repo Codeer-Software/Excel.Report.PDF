@@ -1,4 +1,5 @@
 ﻿using ClosedXML.Excel;
+using DocumentFormat.OpenXml.Spreadsheet;
 using Excel.Report.PDF;
 using NUnit.Framework;
 using PdfSharp.Fonts;
@@ -227,7 +228,6 @@ namespace Test
 
             using var outStream = ExcelConverter.ConvertToPdf(Path.Combine(TestEnvironment.TestResultsPath, "RecursiveLoopTest(1Loop).xlsx"), 1);
             File.WriteAllBytes(Path.Combine(TestEnvironment.TestResultsPath, "RecursiveLoopTest(1Loop).pdf"), outStream.ToArray());
-
         }
 
 
@@ -302,6 +302,25 @@ namespace Test
 
         }
 
+        [Test]
+        public void TestCopyPage()
+        {
+            using (var stream = new FileStream(Path.Combine(TestEnvironment.PdfSrcPath, "TestCopyPage.xlsx"), FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+            using (var book = new XLWorkbook(stream))
+            {   
+                var firstSheet = book.Worksheet(1);
+                var src = firstSheet.Name;
+                firstSheet.Name = src + "_" + 1;
+                for (int i = 1; i <= 3; i++)
+                {
+                    var copy = firstSheet.CopyTo($"{src}_{i + 1}");
+                }
+                book.SaveAs(Path.Combine(TestEnvironment.TestResultsPath, "TestCopyPage.xlsx"));
+            }
 
+            using var outStream = ExcelConverter.ConvertToPdf(Path.Combine(TestEnvironment.TestResultsPath, "TestCopyPage.xlsx"));
+            File.WriteAllBytes(Path.Combine(TestEnvironment.TestResultsPath, "TestCopyPage.pdf"), outStream.ToArray());
+
+        }
     }
 }

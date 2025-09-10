@@ -9,6 +9,18 @@ namespace Excel.Report.PDF
         public static int MaxRow = 2000;
         public static int MaxColumn = 256;
 
+        public static MemoryStream ConvertToPdf(string filePath)
+        {
+            using (var converter = new ExcelConverter(filePath))
+                return converter.ConvertToPdf();
+        }
+
+        public static MemoryStream ConvertToPdf(Stream stream)
+        {
+            using (var converter = new ExcelConverter(stream))
+                return converter.ConvertToPdf();
+        }
+
         public static MemoryStream ConvertToPdf(string filePath, int sheetPosition, PageBreakInfo? pageBreakInfo = null)
         {
             using (var converter = new ExcelConverter(filePath))
@@ -73,7 +85,7 @@ namespace Excel.Report.PDF
             }
         }
 
-        public MemoryStream ConvertToPdf(PageBreakInfo? pageBreakInfo = null)
+        public MemoryStream ConvertToPdf()
         {
             using (var pdf = new PdfDocument())
             {
@@ -81,7 +93,7 @@ namespace Excel.Report.PDF
                 {
                     var ps = _openClosedXML.GetPageSetup(sheetName);
                     var page = pdf.AddPageEx(ps);
-                    var allCells = _openClosedXML.GetCellInfo(sheetName, page.Width.Point, page.Height.Point, out var scaling, pageBreakInfo);
+                    var allCells = _openClosedXML.GetCellInfo(sheetName, page.Width.Point, page.Height.Point, out var scaling, null);
                     DrawPdfCore(ps, pdf, page, allCells, scaling);
                 }
                 var outStream = new MemoryStream();
