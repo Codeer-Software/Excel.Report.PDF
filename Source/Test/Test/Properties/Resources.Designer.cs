@@ -73,6 +73,16 @@ namespace Test.Properties {
         /// <summary>
         ///   型 System.Byte[] のローカライズされたリソースを検索します。
         /// </summary>
+        internal static byte[] LibreBarcode39_Regular {
+            get {
+                object obj = ResourceManager.GetObject("LibreBarcode39_Regular", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   型 System.Byte[] のローカライズされたリソースを検索します。
+        /// </summary>
         internal static byte[] NotoSansJP_ExtraBold {
             get {
                 object obj = ResourceManager.GetObject("NotoSansJP_ExtraBold", resourceCulture);
