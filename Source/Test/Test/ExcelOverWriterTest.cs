@@ -322,5 +322,132 @@ namespace Test
             File.WriteAllBytes(Path.Combine(TestEnvironment.TestResultsPath, "TestCopyPage.pdf"), outStream.ToArray());
 
         }
+
+        class SimpleDataOwner
+        { 
+            public List<SimpleData> Details { get; set; } = new();
+        }
+
+        class SimpleData
+        { 
+            public string Text { get; set; } = string.Empty;
+            public int Number { get; set; }
+        }
+
+        [Test]
+        public async Task MultiPageSheetTest1()
+        {
+
+            var data = new SimpleDataOwner();
+
+            for (int i = 0; i < 100; i++)
+            {
+                data.Details.Add(new SimpleData { Text = $"Test{i + 1}", Number = i + 1 });
+            }
+
+            using (var stream = new FileStream(Path.Combine(TestEnvironment.PdfSrcPath, "MultiPageSheetTest.xlsx"), FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+            using (var book = new XLWorkbook(stream))
+            {
+                await book.OverWrite(new ObjectExcelSymbolConverter(data));
+                book.SaveAs(Path.Combine(TestEnvironment.TestResultsPath, "MultiPageSheetTest1.xlsx"));
+
+                //   var sheet = book.Worksheets.First();
+
+                // B1:the part unrelated to the loop, verify if the data is output as it is.
+                //   var noLoopData = sheet.Cell(1, 2).Value.GetText();
+                //   noLoopData.Is("NameA");
+            }
+
+            using var outStream = ExcelConverter.ConvertToPdf(Path.Combine(TestEnvironment.TestResultsPath, "MultiPageSheetTest1.xlsx"));
+            File.WriteAllBytes(Path.Combine(TestEnvironment.TestResultsPath, "MultiPageSheetTest1.pdf"), outStream.ToArray());
+
+        }
+        [Test]
+        public async Task MultiPageSheetTest2()
+        {
+
+            var data = new SimpleDataOwner();
+
+            for (int i = 0; i < 110; i++)
+            {
+                data.Details.Add(new SimpleData { Text = $"Test{i + 1}", Number = i + 1 });
+            }
+
+            using (var stream = new FileStream(Path.Combine(TestEnvironment.PdfSrcPath, "MultiPageSheetTest.xlsx"), FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+            using (var book = new XLWorkbook(stream))
+            {
+                await book.OverWrite(new ObjectExcelSymbolConverter(data));
+                book.SaveAs(Path.Combine(TestEnvironment.TestResultsPath, "MultiPageSheetTest2.xlsx"));
+
+                //   var sheet = book.Worksheets.First();
+
+                // B1:the part unrelated to the loop, verify if the data is output as it is.
+                //   var noLoopData = sheet.Cell(1, 2).Value.GetText();
+                //   noLoopData.Is("NameA");
+            }
+
+            using var outStream = ExcelConverter.ConvertToPdf(Path.Combine(TestEnvironment.TestResultsPath, "MultiPageSheetTest2.xlsx"));
+            File.WriteAllBytes(Path.Combine(TestEnvironment.TestResultsPath, "MultiPageSheetTest2.pdf"), outStream.ToArray());
+
+        }
+
+
+        [Test]
+        public async Task MultiPageSheetBodyLastTest1()
+        {
+
+            var data = new SimpleDataOwner();
+
+            for (int i = 0; i < 90; i++)
+            {
+                data.Details.Add(new SimpleData { Text = $"Test{i + 1}", Number = i + 1 });
+            }
+
+            using (var stream = new FileStream(Path.Combine(TestEnvironment.PdfSrcPath, "MultiPageSheetBodyLastTest.xlsx"), FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+            using (var book = new XLWorkbook(stream))
+            {
+                await book.OverWrite(new ObjectExcelSymbolConverter(data));
+                book.SaveAs(Path.Combine(TestEnvironment.TestResultsPath, "MultiPageSheetBodyLastTest1.xlsx"));
+
+                //   var sheet = book.Worksheets.First();
+
+                // B1:the part unrelated to the loop, verify if the data is output as it is.
+                //   var noLoopData = sheet.Cell(1, 2).Value.GetText();
+                //   noLoopData.Is("NameA");
+            }
+
+            using var outStream = ExcelConverter.ConvertToPdf(Path.Combine(TestEnvironment.TestResultsPath, "MultiPageSheetBodyLastTest1.xlsx"));
+            File.WriteAllBytes(Path.Combine(TestEnvironment.TestResultsPath, "MultiPageSheetBodyLastTest1.pdf"), outStream.ToArray());
+
+        }
+
+        [Test]
+        public async Task MultiPageSheetBodyLastTest2()
+        {
+
+            var data = new SimpleDataOwner();
+
+            for (int i = 0; i < 100; i++)
+            {
+                data.Details.Add(new SimpleData { Text = $"Test{i + 1}", Number = i + 1 });
+            }
+
+            using (var stream = new FileStream(Path.Combine(TestEnvironment.PdfSrcPath, "MultiPageSheetBodyLastTest.xlsx"), FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+            using (var book = new XLWorkbook(stream))
+            {
+                await book.OverWrite(new ObjectExcelSymbolConverter(data));
+                book.SaveAs(Path.Combine(TestEnvironment.TestResultsPath, "MultiPageSheetBodyLastTest2.xlsx"));
+
+                //   var sheet = book.Worksheets.First();
+
+                // B1:the part unrelated to the loop, verify if the data is output as it is.
+                //   var noLoopData = sheet.Cell(1, 2).Value.GetText();
+                //   noLoopData.Is("NameA");
+            }
+
+            using var outStream = ExcelConverter.ConvertToPdf(Path.Combine(TestEnvironment.TestResultsPath, "MultiPageSheetBodyLastTest2.xlsx"));
+            File.WriteAllBytes(Path.Combine(TestEnvironment.TestResultsPath, "MultiPageSheetBodyLastTest2.pdf"), outStream.ToArray());
+
+        }
     }
 }

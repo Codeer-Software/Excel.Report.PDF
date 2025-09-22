@@ -52,7 +52,7 @@ namespace Excel.Report.PDF
                 var bodySheet = book.Worksheet(e.Value.SourceBodyPageSheetName);
                 for (int i = 0; i < e.Value.BodyPageLists.Count; i++)
                 {
-                    bodySheet.CopyTo($"{e.Value.SourceBodyPageSheetName}_{i}", 2);
+                    bodySheet.CopyTo($"{e.Value.SourceBodyPageSheetName}_{i}", bodySheet.Position + i);
                 }
                 book.Worksheets.Delete(e.Value.SourceBodyPageSheetName);
             }
@@ -80,22 +80,24 @@ namespace Excel.Report.PDF
                 
                 foreach(var leftCell in leftCells)
                 {
-                    //#PagedLoopRows(pageType, rowsPerPage, $items, itemVar, blockRowCount)
+                    //#PagedLoopRows(pageType, rowsPerPage, $items, items, blockRowCount)
                     if (leftCell.StartsWith("#PagedLoopRows"))
                     {
                         var args = leftCell.Replace("#PagedLoopRows", "").Replace("(", "").Replace(")", "").Split(',').Select(e => e.Trim()).ToArray();
                         if (args.Length != 5) break;
-                        var itemVar = args[3];
-                        if (!pagedLoopRowsInfos.TryGetValue(itemVar, out var info))
+                        var items = args[2];
+                        if (!items.StartsWith("$")) break;
+                        items = items.Substring(1);
+                        if (!pagedLoopRowsInfos.TryGetValue(items, out var info))
                         {
                             info = new PageLoopRowsInfo();
-                            var enumerable = (await converter.GetData(itemVar))?.Value as IEnumerable;
+                            var enumerable = (await converter.GetData(items))?.Value as IEnumerable;
                             if (enumerable == null) break;
                             foreach (var e in enumerable)
                             {
                                 info.List.Add(e);
                             }
-                            pagedLoopRowsInfos[itemVar] = info;
+                            pagedLoopRowsInfos[items] = info;
                         }
                         if (!Enum.TryParse<PageType>(args[0], out var pageType)) break;
                         if (!int.TryParse(args[1], out var rowsPerPage)) break;
@@ -183,7 +185,15 @@ namespace Excel.Report.PDF
                     i++;
                     continue;
                 }
-
+                if (!loopInfo.LoopList.Any())
+                {
+                    //loopInfo.RowCopyCount分行を削除
+                    for (int j = 0; j < loopInfo.RowCopyCount; j++)
+                    {
+                        sheet.Row(i + j).Delete();
+                    }
+                    continue;
+                }
                 // delete #LoopRow
                 var cell = sheet.Cell(i, 1);
                 cell.SetValue(XLCellValue.FromObject(null));
@@ -256,13 +266,14 @@ namespace Excel.Report.PDF
         {
             if (!leftCell.StartsWith("#PagedLoopRows")) return false;
             var args = leftCell.Replace("#PagedLoopRows", "").Replace("(", "").Replace(")", "").Split(',').Select(e => e.Trim()).ToArray();
+            if (!int.TryParse(args[4], out var blockRowCount)) return false;
 
             var first = pageLoopRowsInfoList.FirstOrDefault(e => e.FirstPageSheetName == sheetName);
             if (first != null)
             {
                 loopInfo.LoopList = first.FirstPageList;
                 loopInfo.LoopName = args[3];
-                loopInfo.RowCopyCount = first.FirstPageBlockCount;
+                loopInfo.RowCopyCount = blockRowCount;
                 return true;
             }
             var body = pageLoopRowsInfoList.FirstOrDefault(e => e.BodyPageSheetNames.Contains(sheetName));
@@ -271,7 +282,7 @@ namespace Excel.Report.PDF
                 var index = body.BodyPageSheetNames.IndexOf(sheetName);
                 loopInfo.LoopList = body.BodyPageLists[index];
                 loopInfo.LoopName = args[3];
-                loopInfo.RowCopyCount = body.BodyPageBlockCount;
+                loopInfo.RowCopyCount = blockRowCount;
                 return true;
             }
             var last = pageLoopRowsInfoList.FirstOrDefault(e => e.LastPageSheetName == sheetName);
@@ -279,7 +290,7 @@ namespace Excel.Report.PDF
             {
                 loopInfo.LoopList = last.LastPageList;
                 loopInfo.LoopName = args[3];
-                loopInfo.RowCopyCount = last.LastPageBlockCount;
+                loopInfo.RowCopyCount = blockRowCount;
                 return true;
             }
             return false;

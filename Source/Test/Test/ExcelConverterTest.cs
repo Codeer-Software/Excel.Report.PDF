@@ -62,7 +62,6 @@ namespace Test
         [Test]
         public void TestVirticalText() => Convert("TestVirticalText");
 
-
         [Test]
         public void TestBarCode() => Convert("TestBarCode");
 
