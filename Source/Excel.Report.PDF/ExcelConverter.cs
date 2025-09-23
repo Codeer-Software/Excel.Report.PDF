@@ -9,11 +9,8 @@ namespace Excel.Report.PDF
 
         public static MemoryStream ConvertToPdf(string filePath)
         {
-            using var openClosedXML = new OpenClosedXML(filePath);
-            var converter = new PdfRenderer(openClosedXML);
-            using var pdf = new PdfDocument();
-            converter.RenderTo(pdf);
-            return ToMeoryStream(pdf);
+            using var mem = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+            return ConvertToPdf(mem);
         }
 
         public static MemoryStream ConvertToPdf(Stream stream)
@@ -27,11 +24,8 @@ namespace Excel.Report.PDF
 
         public static MemoryStream ConvertToPdf(string filePath, int sheetPosition, PageBreakInfo? pageBreakInfo = null)
         {
-            using var openClosedXML = new OpenClosedXML(filePath);
-            var converter = new PdfRenderer(openClosedXML);
-            using var pdf = new PdfDocument();
-            converter.RenderTo(pdf, sheetPosition, pageBreakInfo);
-            return ToMeoryStream(pdf);
+            using var mem = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+            return ConvertToPdf(mem, sheetPosition, pageBreakInfo);
         }
 
         public static MemoryStream ConvertToPdf(Stream stream, int sheetPosition, PageBreakInfo? pageBreakInfo = null)
@@ -45,11 +39,8 @@ namespace Excel.Report.PDF
 
         public static MemoryStream ConvertToPdf(string filePath, string sheetName, PageBreakInfo? pageBreakInfo = null)
         {
-            using var openClosedXML = new OpenClosedXML(filePath);
-            var converter = new PdfRenderer(openClosedXML);
-            using var pdf = new PdfDocument();
-            converter.RenderTo(pdf, openClosedXML.GetSheetPosition(sheetName), pageBreakInfo);
-            return ToMeoryStream(pdf);
+            using var mem = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+            return ConvertToPdf(mem, sheetName, pageBreakInfo);
         }
 
         public static MemoryStream ConvertToPdf(Stream stream, string sheetName, PageBreakInfo? pageBreakInfo = null)

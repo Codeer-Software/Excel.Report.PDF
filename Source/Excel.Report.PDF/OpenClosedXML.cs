@@ -33,7 +33,6 @@ namespace Excel.Report.PDF
     class OpenClosedXML : IDisposable
     {
         readonly SpreadsheetDocument _document; 
-        Stream? _myOpenStream;
 
         internal XLWorkbook Workbook { get; }
 
@@ -54,20 +53,10 @@ namespace Excel.Report.PDF
             Workbook = new XLWorkbook(stream);
         }
 
-        internal OpenClosedXML(string path)
-        {
-            _myOpenStream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-            _myOpenStream.Position = 0;
-            _document = SpreadsheetDocument.Open(_myOpenStream, false);
-            _myOpenStream.Position = 0;
-            Workbook = new XLWorkbook(_myOpenStream);
-        }
-
         public void Dispose()
         {
             _document.Dispose();
             Workbook.Dispose();
-            _myOpenStream?.Dispose();
         }
 
         WorksheetPart GetWorkSheetPartByPosition(int sheetPosition)
