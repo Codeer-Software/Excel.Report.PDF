@@ -4,15 +4,15 @@ using PdfSharp.Pdf;
 
 namespace Excel.Report.PDF
 {
-    class PdfPageRenderer : IDisposable
+    class PdfRenderer : IDisposable
     {
         internal OpenClosedXML OpenClosedXML { get; }
         Stream? _myOpenStream;
 
-        internal PdfPageRenderer(Stream stream)
+        internal PdfRenderer(Stream stream)
             => OpenClosedXML = new OpenClosedXML(stream);
 
-        internal PdfPageRenderer(string path)
+        internal PdfRenderer(string path)
         {
             _myOpenStream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
             OpenClosedXML = new OpenClosedXML(_myOpenStream);

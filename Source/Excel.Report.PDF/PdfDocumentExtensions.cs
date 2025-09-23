@@ -9,7 +9,7 @@ namespace Excel.Report.PDF
         {
             using var mem = new MemoryStream();
             Workbook.SaveAs(mem);
-            var converter = new PdfPageRenderer(mem);
+            var converter = new PdfRenderer(mem);
             converter.RenderTo(pdf);
         }
     }
