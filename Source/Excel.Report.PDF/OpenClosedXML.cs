@@ -39,8 +39,11 @@ namespace Excel.Report.PDF
         internal IXLPageSetup GetPageSetup(int sheetPosition)
             => Workbook.Worksheet(sheetPosition).PageSetup;
 
-        internal IXLPageSetup GetPageSetup(string sheetName)
-            => Workbook.Worksheet(sheetName).PageSetup;
+        internal int GetSheetPosition(string sheetName)
+            => Workbook.Worksheet(sheetName)?.Position ?? -1;
+
+        internal int SheetCount
+            => Workbook.Worksheets.Count;
 
         internal OpenClosedXML(Stream stream)
         {
@@ -67,23 +70,9 @@ namespace Excel.Report.PDF
             return workSheetPart;
         }
 
-        WorksheetPart GetWorkSheetPartByName(string sheetName)
-        {
-            var workbookPart = _document.WorkbookPart;
-            if (workbookPart == null) throw new InvalidDataException("Invalid sheet");
-            var sheet = workbookPart.Workbook.Descendants<DocumentFormat.OpenXml.Spreadsheet.Sheet>().FirstOrDefault(s => s.Name == sheetName);
-            if (sheet == null) throw new InvalidDataException("Invalid sheet");
-            var workSheetPart = workbookPart.GetPartById(sheet.Id?.ToString() ?? string.Empty) as WorksheetPart;
-            if (workSheetPart == null) throw new InvalidDataException("Invalid sheet");
-            return workSheetPart;
-        }
-
         internal List<List<CellInfo>> GetCellInfo(int sheetPosition, double pdfWidthSrc, double pdfHeightSrc, out double scaling, PageBreakInfo? pageBreakInfo = null)
             => GetCellInfo(Workbook.Worksheet(sheetPosition), GetWorkSheetPartByPosition(sheetPosition), pdfWidthSrc, pdfHeightSrc, out scaling, pageBreakInfo);
-
-        internal List<List<CellInfo>> GetCellInfo(string sheetName, double pdfWidthSrc, double pdfHeightSrc, out double scaling, PageBreakInfo? pageBreakInfo = null)
-            => GetCellInfo(Workbook.Worksheet(sheetName), GetWorkSheetPartByName(sheetName), pdfWidthSrc, pdfHeightSrc, out scaling, pageBreakInfo);
-
+        
         List<List<CellInfo>> GetCellInfo(IXLWorksheet ws, WorksheetPart worksheetPart, double pdfWidthSrc, double pdfHeightSrc, out double scaling, PageBreakInfo? pageBreakInfo = null)
             => GetCellInfo(ws.PageSetup, pdfWidthSrc, pdfHeightSrc,
                 GetPageRanges(ws, worksheetPart, pageBreakInfo), ws.MergedRanges.ToArray(), ws.Pictures.OfType<IXLPicture>().ToArray(), out scaling);

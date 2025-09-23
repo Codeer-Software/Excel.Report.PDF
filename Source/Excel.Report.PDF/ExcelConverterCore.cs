@@ -6,77 +6,41 @@ namespace Excel.Report.PDF
 {
     class ExcelConverterCore : IDisposable
     {
-        OpenClosedXML _openClosedXML;
+        internal OpenClosedXML OpenClosedXML { get; }
         Stream? _myOpenStream;
 
         internal ExcelConverterCore(Stream stream)
-            => _openClosedXML = new OpenClosedXML(stream);
+            => OpenClosedXML = new OpenClosedXML(stream);
 
         internal ExcelConverterCore(string path)
         {
             _myOpenStream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-            _openClosedXML = new OpenClosedXML(_myOpenStream);
+            OpenClosedXML = new OpenClosedXML(_myOpenStream);
         }
 
         public void Dispose()
         {
-            _openClosedXML.Dispose();
+            OpenClosedXML.Dispose();
             _myOpenStream?.Dispose();
-        }
-
-        internal MemoryStream ConvertToPdf(int sheetPosition, PageBreakInfo? pageBreakInfo = null)
-        {
-            using (var pdf = new PdfDocument())
-            {
-                var ps = _openClosedXML.GetPageSetup(sheetPosition);
-                var page = pdf.AddPage(ps);
-                var allCells = _openClosedXML.GetCellInfo(sheetPosition, page.Width.Point, page.Height.Point, out var scaling, pageBreakInfo);
-                return DrawPdf(ps, pdf, page, allCells, scaling);
-            }
-        }
-
-        internal MemoryStream ConvertToPdf(string sheetName, PageBreakInfo? pageBreakInfo = null)
-        {
-            using (var pdf = new PdfDocument())
-            {
-                var ps = _openClosedXML.GetPageSetup(sheetName);
-                var page = pdf.AddPage(ps);
-                var allCells = _openClosedXML.GetCellInfo(sheetName, page.Width.Point, page.Height.Point, out var scaling, pageBreakInfo);
-                return DrawPdf(ps, pdf, page, allCells, scaling);
-            }
-        }
-
-        internal MemoryStream ConvertToPdf()
-        {
-            using (var pdf = new PdfDocument())
-            {
-                ConvertToPdf(pdf);
-                var outStream = new MemoryStream();
-                pdf.Save(outStream);
-                return outStream;
-            }
         }
 
         internal void ConvertToPdf(PdfDocument pdf)
         {
-            foreach (var sheetName in _openClosedXML.GetSheetNames())
+            for(int i = 1; i <= OpenClosedXML.SheetCount; i++)
             {
-                var ps = _openClosedXML.GetPageSetup(sheetName);
-                var page = pdf.AddPage(ps);
-                var allCells = _openClosedXML.GetCellInfo(sheetName, page.Width.Point, page.Height.Point, out var scaling, null);
-                DrawPdfCore(ps, pdf, page, allCells, scaling);
+                ConvertToPdf(pdf, i, null);
             }
         }
 
-        MemoryStream DrawPdf(IXLPageSetup ps, PdfDocument pdf, PdfPage pageSrc, List<List<CellInfo>> allCells, double scaling)
+        internal void ConvertToPdf(PdfDocument pdf, int sheetPosition, PageBreakInfo? pageBreakInfo)
         {
-            DrawPdfCore(ps, pdf, pageSrc, allCells, scaling);
-            var outStream = new MemoryStream();
-            pdf.Save(outStream);
-            return outStream;
+            var ps = OpenClosedXML.GetPageSetup(sheetPosition);
+            var page = pdf.AddPage(ps);
+            var allCells = OpenClosedXML.GetCellInfo(sheetPosition, page.Width.Point, page.Height.Point, out var scaling, pageBreakInfo);
+            DrawPdf(ps, pdf, page, allCells, scaling);
         }
 
-        void DrawPdfCore(IXLPageSetup ps, PdfDocument pdf, PdfPage pageSrc, List<List<CellInfo>> allCells, double scaling)
+        void DrawPdf(IXLPageSetup ps, PdfDocument pdf, PdfPage pageSrc, List<List<CellInfo>> allCells, double scaling)
         {
             PdfPage? page = pageSrc;
             for (int i = 0; i < allCells.Count; i++)
@@ -120,7 +84,7 @@ namespace Excel.Report.PDF
             var cell = cellInfo.Cell!;
             if (cellInfo.MergedFirstCell != null) cell = cellInfo.MergedFirstCell.Cell!;
 
-            var xBackColor = _openClosedXML.ChangeColor(cell.Style.Fill.BackgroundColor);
+            var xBackColor = OpenClosedXML.ChangeColor(cell.Style.Fill.BackgroundColor);
             if (xBackColor != null)
             {
                 var brush = new XSolidBrush(xBackColor.Value);
@@ -232,7 +196,7 @@ namespace Excel.Report.PDF
                 {
                     // Excel-like "Double": two THIN strokes separated by a THIN-sized gap.
                     // Do NOT draw a center line. That would be eaten by a neighbor single line.
-                    var thin = _openClosedXML.ConvertToXPen(XLBorderStyleValues.Thin, color, scaling);
+                    var thin = OpenClosedXML.ConvertToXPen(XLBorderStyleValues.Thin, color, scaling);
 
                     // Ensure a visible gap on screen/PDF rasterizers
                     double w = Math.Max(thin.Width, 0.7); // >=0.5pt guard for visibility
@@ -254,7 +218,7 @@ namespace Excel.Report.PDF
                 }
 
                 // Other styles: use the normal pen
-                var pen = _openClosedXML.ConvertToXPen(style, color, scaling);
+                var pen = OpenClosedXML.ConvertToXPen(style, color, scaling);
                 gfx.DrawLine(pen, x1, y1, x2, y2);
             }
 
@@ -331,7 +295,7 @@ namespace Excel.Report.PDF
             var font = new XFont(cell.Style.Font.FontName, fontSize * scaling, fontStyle);
 
             var text = cell.GetFormattedString();
-            var xFontColor = _openClosedXML.ChangeColor(cell.Style.Font.FontColor) ?? XColor.FromArgb(255, 0, 0, 0);
+            var xFontColor = OpenClosedXML.ChangeColor(cell.Style.Font.FontColor) ?? XColor.FromArgb(255, 0, 0, 0);
             var brush = new XSolidBrush(xFontColor);
 
             double w = cellInfo.MergedWidth != 0 ? cellInfo.MergedWidth : cellInfo.Width;
