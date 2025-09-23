@@ -4,26 +4,16 @@ using PdfSharp.Pdf;
 
 namespace Excel.Report.PDF
 {
-    class PdfRenderer : IDisposable
+    class PdfRenderer
     {
-        internal OpenClosedXML OpenClosedXML { get; }
+        readonly OpenClosedXML _openClosedXML;
 
-        internal PdfRenderer(Stream stream)
-            => OpenClosedXML = new OpenClosedXML(stream);
-
-        internal PdfRenderer(string path)
-        {
-            OpenClosedXML = new OpenClosedXML(path);
-        }
-
-        public void Dispose()
-        {
-            OpenClosedXML.Dispose();
-        }
+        internal PdfRenderer(OpenClosedXML openClosedXML)
+            => _openClosedXML = openClosedXML;
 
         internal void RenderTo(PdfDocument pdf)
         {
-            for(int i = 1; i <= OpenClosedXML.SheetCount; i++)
+            for(int i = 1; i <= _openClosedXML.SheetCount; i++)
             {
                 RenderTo(pdf, i, null);
             }
@@ -31,9 +21,9 @@ namespace Excel.Report.PDF
 
         internal void RenderTo(PdfDocument pdf, int sheetPosition, PageBreakInfo? pageBreakInfo)
         {
-            var ps = OpenClosedXML.GetPageSetup(sheetPosition);
+            var ps = _openClosedXML.GetPageSetup(sheetPosition);
             var page = pdf.AddPage(ps);
-            var allCells = OpenClosedXML.GetCellInfo(sheetPosition, page.Width.Point, page.Height.Point, out var scaling, pageBreakInfo);
+            var allCells = _openClosedXML.GetCellInfo(sheetPosition, page.Width.Point, page.Height.Point, out var scaling, pageBreakInfo);
             RenderTo(pdf, ps, page, allCells, scaling);
         }
 
@@ -81,7 +71,7 @@ namespace Excel.Report.PDF
             var cell = cellInfo.Cell!;
             if (cellInfo.MergedFirstCell != null) cell = cellInfo.MergedFirstCell.Cell!;
 
-            var xBackColor = OpenClosedXML.ChangeColor(cell.Style.Fill.BackgroundColor);
+            var xBackColor = _openClosedXML.ChangeColor(cell.Style.Fill.BackgroundColor);
             if (xBackColor != null)
             {
                 var brush = new XSolidBrush(xBackColor.Value);
@@ -193,7 +183,7 @@ namespace Excel.Report.PDF
                 {
                     // Excel-like "Double": two THIN strokes separated by a THIN-sized gap.
                     // Do NOT draw a center line. That would be eaten by a neighbor single line.
-                    var thin = OpenClosedXML.ConvertToXPen(XLBorderStyleValues.Thin, color, scaling);
+                    var thin = _openClosedXML.ConvertToXPen(XLBorderStyleValues.Thin, color, scaling);
 
                     // Ensure a visible gap on screen/PDF rasterizers
                     double w = Math.Max(thin.Width, 0.7); // >=0.5pt guard for visibility
@@ -215,7 +205,7 @@ namespace Excel.Report.PDF
                 }
 
                 // Other styles: use the normal pen
-                var pen = OpenClosedXML.ConvertToXPen(style, color, scaling);
+                var pen = _openClosedXML.ConvertToXPen(style, color, scaling);
                 gfx.DrawLine(pen, x1, y1, x2, y2);
             }
 
@@ -292,7 +282,7 @@ namespace Excel.Report.PDF
             var font = new XFont(cell.Style.Font.FontName, fontSize * scaling, fontStyle);
 
             var text = cell.GetFormattedString();
-            var xFontColor = OpenClosedXML.ChangeColor(cell.Style.Font.FontColor) ?? XColor.FromArgb(255, 0, 0, 0);
+            var xFontColor = _openClosedXML.ChangeColor(cell.Style.Font.FontColor) ?? XColor.FromArgb(255, 0, 0, 0);
             var brush = new XSolidBrush(xFontColor);
 
             double w = cellInfo.MergedWidth != 0 ? cellInfo.MergedWidth : cellInfo.Width;
