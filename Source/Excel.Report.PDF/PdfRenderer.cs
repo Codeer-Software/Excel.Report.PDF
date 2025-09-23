@@ -6,7 +6,21 @@ namespace Excel.Report.PDF
 {
     class PdfRenderer
     {
+        class PageProcessCommand : IPostProcessCommand
+        {
+            Action Action { get; }
+            public PageProcessCommand(Action action) => Action = action;
+            public void Execute() => Action();
+        }
+
+        class GraphicsDisposeCommand : IPostProcessCommand
+        {
+            public List<IDisposable> Graphics { get; set; } = new();
+            public void Execute() => Graphics.ForEach(e => e.Dispose());
+        }
+
         readonly OpenClosedXML _openClosedXML;
+        internal List<IPostProcessCommand> PostProcessCommands { get; } = new();
 
         internal PdfRenderer(OpenClosedXML openClosedXML)
             => _openClosedXML = openClosedXML;
@@ -24,16 +38,28 @@ namespace Excel.Report.PDF
             var ps = _openClosedXML.GetPageSetup(sheetPosition);
             var page = pdf.AddPage(ps);
             var allCells = _openClosedXML.GetCellInfo(sheetPosition, page.Width.Point, page.Height.Point, out var scaling, pageBreakInfo);
-            RenderTo(pdf, ps, page, allCells, scaling);
+
+            GraphicsDisposeCommand graphicsDisposer = new();
+            RenderTo(graphicsDisposer, pdf, ps, page, allCells, scaling);
+            if (PostProcessCommands.Any())
+            {
+                PostProcessCommands.Add(graphicsDisposer);
+            }
+            else
+            {
+                graphicsDisposer.Execute();
+            }
         }
 
-        void RenderTo(PdfDocument pdf, IXLPageSetup ps, PdfPage pageSrc, List<List<CellInfo>> allCells, double scaling)
+        void RenderTo(GraphicsDisposeCommand graphicsDisposer, PdfDocument pdf, IXLPageSetup ps, PdfPage pageSrc, List<List<CellInfo>> allCells, double scaling)
         {
             PdfPage? page = pageSrc;
             for (int i = 0; i < allCells.Count; i++)
             {
                 if (page == null) page = pdf.AddPage(ps);
-                using var gfx = XGraphics.FromPdfPage(page);
+                var currentPage = page;
+                var gfx = XGraphics.FromPdfPage(page);
+                graphicsDisposer.Graphics.Add(gfx);
                 page = null;
                 var drawLineCache = new DrawLineCache(gfx);
 
@@ -48,7 +74,7 @@ namespace Excel.Report.PDF
                 }
                 foreach (var cellInfo in allCells[i])
                 {
-                    DrawCellText(gfx, scaling, cellInfo);
+                    DrawCellText(pdf, currentPage, gfx, scaling, cellInfo);
                 }
 
                 var pictureInfoAndCellInfo = new List<PictureInfoAndCellInfo>();
@@ -230,7 +256,7 @@ namespace Excel.Report.PDF
                 cellInfo.X, cellInfo.Y + cellInfo.Height, cellInfo.X, cellInfo.Y, IsDrawLeft(cellInfo));
         }
 
-        void DrawCellText(XGraphics gfx, double scaling, CellInfo cellInfo)
+        void DrawCellText(PdfDocument pdf, PdfPage page, XGraphics currentXG, double scaling, CellInfo cellInfo)
         {
             var cell = cellInfo.Cell!;
 
@@ -304,7 +330,8 @@ namespace Excel.Report.PDF
             if (raw == 255)
             {
                 // Excel's "Vertical Text" (stack)
-                DrawVerticalStack(gfx, font, brush, rect, format, lines);
+                if (TryResolvePageVariable(lines, l => DrawVerticalStack(currentXG, font, brush, rect, format, new[] { l }))) return;
+                DrawVerticalStack(currentXG, font, brush, rect, format, lines);
                 return;
             }
 
@@ -316,7 +343,8 @@ namespace Excel.Report.PDF
 
             if (anglePdf != 0)
             {
-                DrawRotated(gfx, font, brush, rect, format, lines, anglePdf);
+                if (TryResolvePageVariable(lines, l => DrawRotated(currentXG, font, brush, rect, format, new[] { l }, anglePdf))) return;
+                DrawRotated(currentXG, font, brush, rect, format, lines, anglePdf);
                 return;
             }
 
@@ -327,16 +355,53 @@ namespace Excel.Report.PDF
             else if (format.LineAlignment == XLineAlignment.Far)
                 startY += rect.Height - lines.Length * font.Height;
 
+            if (TryResolvePageVariable(lines, l => currentXG.DrawString(l, font, brush, new XRect(rect.X, startY, rect.Width, font.Height), format))) return;  
             foreach (var line in lines)
             {
-                gfx.DrawString(line, font, brush, new XRect(rect.X, startY, rect.Width, font.Height), format);
+                currentXG.DrawString(line, font, brush, new XRect(rect.X, startY, rect.Width, font.Height), format);
                 startY += font.Height;
             }
 
             // ======== Local functions ========
+            bool TryResolvePageVariable(string[] lines, Action<string> draw)
+            {
+                if (lines.Length != 1) return false;
+                var line = lines[0];
+
+                //ここで覚える
+                Action action = () => { };
+                if (line == "#Page")
+                {
+                    line = pdf.PageCount.ToString();
+                    draw(line);
+                    return true;
+                }
+                else if (line == "#PageCount")
+                {
+                    PostProcessCommands.Add(new PageProcessCommand(() =>
+                    {
+                        var pageCount = pdf.PageCount.ToString();
+                        draw(pageCount);
+                    }));
+                    return true;
+                }
+                else if (line.StartsWith("#PageOf"))
+                {
+                    var args = line.Replace("#PageOf", "").Replace("(", "").Replace(")", "").Split(',').Select(e => e.Trim()).ToArray();
+                    var sp = args.FirstOrDefault()?.Replace("\"", "") ?? "/";
+                    var currentPage = pdf.PageCount.ToString();
+                    PostProcessCommands.Add(new PageProcessCommand(() =>
+                    {
+                        var pageCount = pdf.PageCount.ToString();
+                        draw(currentPage + sp + pageCount);
+                    }));
+                    return true;
+                }
+                return false;
+            }
 
             // Vertical writing (Excel stack): place characters top→bottom, advance columns left→right
-            void DrawVerticalStack(XGraphics g, XFont f, XBrush b, XRect r, XStringFormat fmt, string[] cols)
+            static void DrawVerticalStack(XGraphics g, XFont f, XBrush b, XRect r, XStringFormat fmt, string[] cols)
             {
                 double step = f.Height;                 // one cell
                 double totalW = cols.Length * step;
@@ -371,7 +436,7 @@ namespace Excel.Report.PDF
             }
 
             // Arbitrary-angle drawing: rotate the coordinate system around the rectangle center (do not swap width/height)
-            void DrawRotated(XGraphics g, XFont f, XBrush b, XRect r, XStringFormat fmt, string[] content, int angle)
+            static void DrawRotated(XGraphics g, XFont f, XBrush b, XRect r, XStringFormat fmt, string[] content, int angle)
             {
                 g.Save();
 

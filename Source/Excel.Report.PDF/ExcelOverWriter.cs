@@ -185,21 +185,38 @@ namespace Excel.Report.PDF
                     i++;
                     continue;
                 }
-                if (!loopInfo.LoopList.Any())
-                {
-                    //loopInfo.RowCopyCount分行を削除
-                    for (int j = 0; j < loopInfo.RowCopyCount; j++)
-                    {
-                        sheet.Row(i + j).Delete();
-                    }
-                    continue;
-                }
+
                 // delete #LoopRow
                 var cell = sheet.Cell(i, 1);
                 cell.SetValue(XLCellValue.FromObject(null));
 
+                if (!loopInfo.LoopList.Any())
+                {
+                    if (loopInfo.IsInsertMode)
+                    {
+                        for (int j = 0; j < loopInfo.RowCopyCount; j++)
+                        {
+                            sheet.Row(i + j).Delete();
+                        }
+                    }
+                    else 
+                    {
+                        //$Empty cells of strings beginning with $
+                        for (int j = 1; j <= colCount; j++)
+                        {
+                            var x = sheet.Cell(i, j);
+                            if (x.GetString().Trim().StartsWith("$"))
+                            {
+                                x.SetValue(XLCellValue.FromObject(null));
+                            }
+                        }
+                        i++;
+                    }
+                    continue;
+                }
+
                 // copy rows
-                CopyRows(sheet, i, loopInfo.RowCopyCount, loopInfo.LoopList.Count);
+                CopyRows(sheet, i, loopInfo.RowCopyCount, loopInfo.LoopList.Count, loopInfo.IsInsertMode);
 
                 // over write
                 bool isFirstLoop = true;
@@ -224,6 +241,7 @@ namespace Excel.Report.PDF
             internal int RowCopyCount { get; set; }
             internal List<object?> LoopList { get; set; } = new();
             internal string LoopName { get; set; } = string.Empty;
+            internal bool IsInsertMode { get; set; }
         }
 
         static async Task<bool> TryParseLoop(string leftCell, IExcelSymbolConverter converter, LoopInfo loopInfo, string sheetName, List<PageLoopRowsInfo> pageLoopRowsInfoList)
@@ -245,6 +263,7 @@ namespace Excel.Report.PDF
             {
                 if (!int.TryParse(args[2], out rowCopyCount)) return false;
             }
+            loopInfo.IsInsertMode = true;
             loopInfo.RowCopyCount = rowCopyCount;
 
             // #list and i(enumerable name) are must
@@ -267,6 +286,7 @@ namespace Excel.Report.PDF
             if (!leftCell.StartsWith("#PagedLoopRows")) return false;
             var args = leftCell.Replace("#PagedLoopRows", "").Replace("(", "").Replace(")", "").Split(',').Select(e => e.Trim()).ToArray();
             if (!int.TryParse(args[4], out var blockRowCount)) return false;
+            loopInfo.IsInsertMode = false;
 
             var first = pageLoopRowsInfoList.FirstOrDefault(e => e.FirstPageSheetName == sheetName);
             if (first != null)
@@ -317,7 +337,7 @@ namespace Excel.Report.PDF
             cell.SetValue(XLCellValue.FromObject(cellData.Value));
         }
 
-        static void CopyRows(IXLWorksheet sheet, int rowIndex, int rowCopyCount, int loopCount)
+        static void CopyRows(IXLWorksheet sheet, int rowIndex, int rowCopyCount, int loopCount, bool isInsertMode)
         {
             var rangeToCopy = sheet.Range($"{rowIndex}:{rowIndex + rowCopyCount - 1}");
 
@@ -326,13 +346,13 @@ namespace Excel.Report.PDF
             {
                 srcHeights.Add(sheet.Row(rowIndex + i).Height);
             }
-
             for (int i = 1; i < loopCount; i++)
             {
                 var insertRowIndex = rowIndex + rowCopyCount * i;
-                var insertRow = sheet.Row(insertRowIndex).InsertRowsAbove(rowCopyCount).First();
+                var insertRow = isInsertMode ?
+                    sheet.Row(insertRowIndex).InsertRowsAbove(rowCopyCount).First() :
+                    sheet.Row(insertRowIndex);
                 rangeToCopy.CopyTo(insertRow);
-
                 for (int j = 0; j < rowCopyCount; j++)
                 {
                     sheet.Row(insertRowIndex + j).Height = srcHeights[j];

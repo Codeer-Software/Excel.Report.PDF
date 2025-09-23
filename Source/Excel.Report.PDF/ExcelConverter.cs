@@ -19,6 +19,7 @@ namespace Excel.Report.PDF
             var converter = new PdfRenderer(openClosedXML);
             using var pdf = new PdfDocument();
             converter.RenderTo(pdf);
+            converter.PostProcessCommands.ExecuteAll();
             return ToMeoryStream(pdf);
         }
 
@@ -34,6 +35,7 @@ namespace Excel.Report.PDF
             var converter = new PdfRenderer(openClosedXML);
             using var pdf = new PdfDocument();
             converter.RenderTo(pdf, sheetPosition, pageBreakInfo);
+            converter.PostProcessCommands.ExecuteAll();
             return ToMeoryStream(pdf);
         }
 
@@ -49,6 +51,7 @@ namespace Excel.Report.PDF
             var converter = new PdfRenderer(openClosedXML);
             using var pdf = new PdfDocument();
             converter.RenderTo(pdf, openClosedXML.GetSheetPosition(sheetName), pageBreakInfo);
+            converter.PostProcessCommands.ExecuteAll();
             return ToMeoryStream(pdf);
         }
 
