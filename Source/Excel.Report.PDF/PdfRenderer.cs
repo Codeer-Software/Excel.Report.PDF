@@ -7,21 +7,18 @@ namespace Excel.Report.PDF
     class PdfRenderer : IDisposable
     {
         internal OpenClosedXML OpenClosedXML { get; }
-        Stream? _myOpenStream;
 
         internal PdfRenderer(Stream stream)
             => OpenClosedXML = new OpenClosedXML(stream);
 
         internal PdfRenderer(string path)
         {
-            _myOpenStream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-            OpenClosedXML = new OpenClosedXML(_myOpenStream);
+            OpenClosedXML = new OpenClosedXML(path);
         }
 
         public void Dispose()
         {
             OpenClosedXML.Dispose();
-            _myOpenStream?.Dispose();
         }
 
         internal void RenderTo(PdfDocument pdf)
