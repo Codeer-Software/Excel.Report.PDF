@@ -9,49 +9,49 @@ namespace Excel.Report.PDF
 
         public static MemoryStream ConvertToPdf(string filePath)
         {
-            using var converter = new ExcelConverterCore(filePath);
+            using var converter = new PdfPageRenderer(filePath);
             using var pdf = new PdfDocument();
-            converter.ConvertToPdf(pdf);
+            converter.RenderTo(pdf);
             return ToMeoryStream(pdf);
         }
 
         public static MemoryStream ConvertToPdf(Stream stream)
         {
-            using var converter = new ExcelConverterCore(stream);
+            using var converter = new PdfPageRenderer(stream);
             using var pdf = new PdfDocument();
-            converter.ConvertToPdf(pdf);
+            converter.RenderTo(pdf);
             return ToMeoryStream(pdf);
         }
 
         public static MemoryStream ConvertToPdf(string filePath, int sheetPosition, PageBreakInfo? pageBreakInfo = null)
         {
-            using var converter = new ExcelConverterCore(filePath);
+            using var converter = new PdfPageRenderer(filePath);
             using var pdf = new PdfDocument();
-            converter.ConvertToPdf(pdf, sheetPosition, pageBreakInfo);
+            converter.RenderTo(pdf, sheetPosition, pageBreakInfo);
             return ToMeoryStream(pdf);
         }
 
         public static MemoryStream ConvertToPdf(Stream stream, int sheetPosition, PageBreakInfo? pageBreakInfo = null)
         {
-            using var converter = new ExcelConverterCore(stream);
+            using var converter = new PdfPageRenderer(stream);
             using var pdf = new PdfDocument();
-            converter.ConvertToPdf(pdf, sheetPosition, pageBreakInfo);
+            converter.RenderTo(pdf, sheetPosition, pageBreakInfo);
             return ToMeoryStream(pdf);
         }
 
         public static MemoryStream ConvertToPdf(string filePath, string sheetName, PageBreakInfo? pageBreakInfo = null)
         {
-            using var converter = new ExcelConverterCore(filePath);
+            using var converter = new PdfPageRenderer(filePath);
             using var pdf = new PdfDocument();
-            converter.ConvertToPdf(pdf, converter.OpenClosedXML.GetSheetPosition(sheetName), pageBreakInfo);
+            converter.RenderTo(pdf, converter.OpenClosedXML.GetSheetPosition(sheetName), pageBreakInfo);
             return ToMeoryStream(pdf);
         }
 
         public static MemoryStream ConvertToPdf(Stream stream, string sheetName, PageBreakInfo? pageBreakInfo = null)
         {
-            using var converter = new ExcelConverterCore(stream);
+            using var converter = new PdfPageRenderer(stream);
             using var pdf = new PdfDocument();
-            converter.ConvertToPdf(pdf, converter.OpenClosedXML.GetSheetPosition(sheetName), pageBreakInfo);
+            converter.RenderTo(pdf, converter.OpenClosedXML.GetSheetPosition(sheetName), pageBreakInfo);
             return ToMeoryStream(pdf);
         }
 

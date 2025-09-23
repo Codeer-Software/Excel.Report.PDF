@@ -4,15 +4,15 @@ using PdfSharp.Pdf;
 
 namespace Excel.Report.PDF
 {
-    class ExcelConverterCore : IDisposable
+    class PdfPageRenderer : IDisposable
     {
         internal OpenClosedXML OpenClosedXML { get; }
         Stream? _myOpenStream;
 
-        internal ExcelConverterCore(Stream stream)
+        internal PdfPageRenderer(Stream stream)
             => OpenClosedXML = new OpenClosedXML(stream);
 
-        internal ExcelConverterCore(string path)
+        internal PdfPageRenderer(string path)
         {
             _myOpenStream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
             OpenClosedXML = new OpenClosedXML(_myOpenStream);
@@ -24,23 +24,23 @@ namespace Excel.Report.PDF
             _myOpenStream?.Dispose();
         }
 
-        internal void ConvertToPdf(PdfDocument pdf)
+        internal void RenderTo(PdfDocument pdf)
         {
             for(int i = 1; i <= OpenClosedXML.SheetCount; i++)
             {
-                ConvertToPdf(pdf, i, null);
+                RenderTo(pdf, i, null);
             }
         }
 
-        internal void ConvertToPdf(PdfDocument pdf, int sheetPosition, PageBreakInfo? pageBreakInfo)
+        internal void RenderTo(PdfDocument pdf, int sheetPosition, PageBreakInfo? pageBreakInfo)
         {
             var ps = OpenClosedXML.GetPageSetup(sheetPosition);
             var page = pdf.AddPage(ps);
             var allCells = OpenClosedXML.GetCellInfo(sheetPosition, page.Width.Point, page.Height.Point, out var scaling, pageBreakInfo);
-            DrawPdf(ps, pdf, page, allCells, scaling);
+            RenderTo(pdf, ps, page, allCells, scaling);
         }
 
-        void DrawPdf(IXLPageSetup ps, PdfDocument pdf, PdfPage pageSrc, List<List<CellInfo>> allCells, double scaling)
+        void RenderTo(PdfDocument pdf, IXLPageSetup ps, PdfPage pageSrc, List<List<CellInfo>> allCells, double scaling)
         {
             PdfPage? page = pageSrc;
             for (int i = 0; i < allCells.Count; i++)
