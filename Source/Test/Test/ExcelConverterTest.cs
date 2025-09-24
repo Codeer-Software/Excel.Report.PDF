@@ -66,6 +66,11 @@ namespace Test
         public void TestBarCode() => Convert("TestBarCode");
 
         [Test]
+        public void TestRect() => Convert("TestRect");
+
+        //
+
+        [Test]
         public void TestMultiSheet()
         {
             var workbookPath = Path.Combine(TestEnvironment.PdfSrcPath, "TestMultiSheet.xlsx");
