@@ -10,12 +10,12 @@ namespace Excel.Report.PDF
             public List<object?> List { get; set; } = new();
 
             public string FirstPageSheetName { get; set; } = string.Empty;
-            public int FirstPageBlockCount { get; set; } = -1;
+            public int FirstPageBlockCount { get; set; }
             public string SourceBodyPageSheetName { get; set; } = string.Empty;
             public List<string> BodyPageSheetNames { get; set; } = new();
-            public int BodyPageBlockCount { get; set; } = -1;
+            public int BodyPageBlockCount { get; set; }
             public string LastPageSheetName { get; set; } = string.Empty;
-            public int LastPageBlockCount { get; set; } = -1;
+            public int LastPageBlockCount { get; set; }
 
             public List<object?> FirstPageList { get; set; } = new();
             public List<List<object?>> BodyPageLists { get; set; } = new();

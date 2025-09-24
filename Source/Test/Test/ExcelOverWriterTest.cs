@@ -440,6 +440,31 @@ namespace Test
         }
 
         [Test]
+        public async Task MultiPageSheetBodyTest()
+        {
+            var data = new SimpleDataOwner();
+
+            for (int i = 0; i < 90; i++)
+            {
+                data.Details.Add(new SimpleData { Text = $"Test{i + 1}", Number = i + 1 });
+            }
+
+            using (var stream = new FileStream(Path.Combine(TestEnvironment.PdfSrcPath, "MultiPageSheetBodyTest.xlsx"), FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+            using (var book = new XLWorkbook(stream))
+            {
+                await book.OverWrite(new ObjectExcelSymbolConverter(data));
+                book.SaveAs(Path.Combine(TestEnvironment.TestResultsPath, "MultiPageSheetBodyTest.xlsx"));
+
+                book.Worksheets.Count.Is(3);
+                book.Worksheet("body_0").Cell(2, 2).Value.Is("Test1");
+                book.Worksheet("body_0").Cell(31, 2).Value.Is("Test30");
+            }
+
+            using var outStream = ExcelConverter.ConvertToPdf(Path.Combine(TestEnvironment.TestResultsPath, "MultiPageSheetBodyTest.xlsx"));
+            File.WriteAllBytes(Path.Combine(TestEnvironment.TestResultsPath, "MultiPageSheetBodyTest.pdf"), outStream.ToArray());
+        }
+
+        [Test]
         public async Task MultiPageSheetPageTest()
         {
             var data = new SimpleDataOwner();
