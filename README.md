@@ -114,3 +114,33 @@ using var outStream = ExcelConverter.ConvertToPdf(newStream, 1);
 File.WriteAllBytes(pdfPath, outStream.ToArray());
 ```
 
+### 3. [#PagedLoopRows(pageType, rowsPerPage, $elements, elementName, blockRowCount)]
+It can be specified in column A.Copies the specified row as many times as blockRowCount and adds the row.  
+By specifying pageType and rowsPerPage, you can configure the page layout and the number of rows displayed per page for each of the three page types: `First` (first page), `Body` (middle pages), and `Last` (final page).
+
+* **First**: The page that appears once at the very beginning of the report or list.
+* **Body**: The middle pages used to output the main data across multiple pages.
+* **Last**: The page that appears once at the very end to close the report or list.
+
+| Name |  |
+| ---- | ---- |
+| pageType | Specify the page type. For each loop, select exactly one of: First, Body, or Last. |
+| rowsPerPage | Number of lines to display per page. |
+| $elements | A loop element. Specifies the symbol returned by IEnumerable. |
+| elementName | The name of a repeating element used within a row. |
+| blockRowCount | Number of rows to copy. |
+
+<br>
+<img src="Image/MultiPageSheet.png">
+Please refer to "2. [#LoopRow($elements, elementName, copyRowCount)]" for sample data.
+
+### 4. \[\#Page][#PageCount][#PageOf("/")]
+It can display number of pages. It can be specified in any column except column A.
+| Name |  |
+| ---- | ---- |
+| #Page | Current number of pages. |
+| #PageCount | Total number of pages. |
+| #PageOf("/") | Current and total page counts. Specify the separator in the parentheses (e.g., "of").|
+
+<br>
+<img src="Image/NumberOfPages.png">
