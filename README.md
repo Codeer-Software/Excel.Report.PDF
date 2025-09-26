@@ -131,11 +131,15 @@ By specifying pageType and rowsPerPage, you can configure the page layout and th
 | blockRowCount | Number of rows to copy. |
 
 <br>
-<img src="Image/MultiPageSheet.png">
+MultiPageSheetSample
+<img src="Image/MultiPageSheetSample.png">
+
+MultiPageSheetSample convert to PDF
+<img src="Image/MultiPageSheetSamplePDF.png">
 Please refer to "2. [#LoopRow($elements, elementName, copyRowCount)]" for sample data.
 
 ### 4. \[\#Page][#PageCount][#PageOf("/")]
-It can display number of pages. It can be specified in any column except column A.
+It can display number of pages. It can be specified in any column except column A. It is only available for PDF output.
 | Name |  |
 | ---- | ---- |
 | #Page | Current number of pages. |
