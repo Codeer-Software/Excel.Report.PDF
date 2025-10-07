@@ -516,5 +516,23 @@ namespace Test
             using var outStream = ExcelConverter.ConvertToPdf(Path.Combine(TestEnvironment.TestResultsPath, "Image.xlsx"));
             File.WriteAllBytes(Path.Combine(TestEnvironment.TestResultsPath, "Image.pdf"), outStream.ToArray());
         }
+
+        [Test]
+        public async Task ImageQRLoop()
+        {
+            var data = new SimpleDataOwner();
+
+            data.Details.Add(new SimpleData { Text = "https://www.codeer.co.jp/", Bin = Resources.ImageSample });
+
+            using (var stream = new FileStream(Path.Combine(TestEnvironment.PdfSrcPath, "ImageQRLoop.xlsx"), FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+            using (var book = new XLWorkbook(stream))
+            {
+                await book.OverWrite(new ObjectExcelSymbolConverter(data));
+                book.SaveAs(Path.Combine(TestEnvironment.TestResultsPath, "ImageQRLoop.xlsx"));
+            }
+
+            using var outStream = ExcelConverter.ConvertToPdf(Path.Combine(TestEnvironment.TestResultsPath, "ImageQRLoop.xlsx"));
+            File.WriteAllBytes(Path.Combine(TestEnvironment.TestResultsPath, "ImageQRLoop.pdf"), outStream.ToArray());
+        }
     }
 }

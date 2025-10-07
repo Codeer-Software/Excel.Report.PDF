@@ -395,7 +395,7 @@ namespace Excel.Report.PDF
                     if (!string.IsNullOrEmpty(qrText))
                     {
                         using var gen = new QRCodeGenerator();
-                        using var data = gen.CreateQrCode(text, QRCodeGenerator.ECCLevel.M);
+                        using var data = gen.CreateQrCode(qrText, QRCodeGenerator.ECCLevel.M);
 
                         var png = new PngByteQRCode(data);
                         var bytes = png.GetGraphic(
@@ -406,8 +406,8 @@ namespace Excel.Report.PDF
                         using var stream = new MemoryStream(bytes);
                         var image = sheet.AddPicture(stream);
                         image.MoveTo(sheet.Cell(rowIndex, cellIndex), 0, 0);
+                        sheet.Cell(rowIndex, cellIndex).SetValue(XLCellValue.FromObject(null));
                     }
-                    sheet.Cell(rowIndex, cellIndex).SetValue(XLCellValue.FromObject(null));
                 }
                 else if (text.StartsWith("$"))
                 {
