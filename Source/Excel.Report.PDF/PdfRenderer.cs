@@ -475,6 +475,7 @@ namespace Excel.Report.PDF
 
         static void DrawPictures(XGraphics gfx, PictureInfoAndCellInfo item)
         {
+            item.PictureInfo.Picture!.Position = 0;
             var xImage = XImage.FromStream(item.PictureInfo.Picture!);
             gfx.DrawImage(xImage,
             item.CellInfo.X + item.PictureInfo.X,

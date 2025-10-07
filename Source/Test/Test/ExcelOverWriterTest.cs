@@ -3,6 +3,7 @@ using DocumentFormat.OpenXml.Spreadsheet;
 using Excel.Report.PDF;
 using NUnit.Framework;
 using PdfSharp.Fonts;
+using Test.Properties;
 
 namespace Test
 {
@@ -326,9 +327,10 @@ namespace Test
         }
 
         class SimpleData
-        { 
+        {
             public string Text { get; set; } = string.Empty;
             public int Number { get; set; }
+            public byte[] Bin { get; set; } = [];
         }
 
         [Test]
@@ -378,7 +380,6 @@ namespace Test
                 book.Worksheet("first").Cell(11, 2).Value.Is("Test10");
                 book.Worksheet("body_0").Cell(31, 2).Value.Is("Test40");
                 book.Worksheet("last").Cell(11, 2).Value.Is("Test110");
-//                book.Worksheet("last").Cell(12, 2).Value.Is("★");
             }
 
             using var outStream = ExcelConverter.ConvertToPdf(Path.Combine(TestEnvironment.TestResultsPath, "MultiPageSheetTest2.xlsx"));
@@ -432,7 +433,6 @@ namespace Test
                 book.Worksheet("body_0").Cell(2, 2).Value.Is("Test1");
                 book.Worksheet("body_0").Cell(31, 2).Value.Is("Test30");
                 book.Worksheet("last").Cell(11, 2).Value.Is("Test100");
-        //        book.Worksheet("last").Cell(12, 2).Value.Is("★");
             }
 
             using var outStream = ExcelConverter.ConvertToPdf(Path.Combine(TestEnvironment.TestResultsPath, "MultiPageSheetBodyLastTest2.xlsx"));
@@ -483,6 +483,38 @@ namespace Test
 
             using var outStream = ExcelConverter.ConvertToPdf(Path.Combine(TestEnvironment.TestResultsPath, "MultiPageSheetPageTest.xlsx"));
             File.WriteAllBytes(Path.Combine(TestEnvironment.TestResultsPath, "MultiPageSheetPageTest.pdf"), outStream.ToArray());
+        }
+
+        [Test]
+        public async Task QRCode()
+        {
+            var data = new SimpleData { Text = "https://www.codeer.co.jp/" };
+
+            using (var stream = new FileStream(Path.Combine(TestEnvironment.PdfSrcPath, "QR.xlsx"), FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+            using (var book = new XLWorkbook(stream))
+            {
+                await book.OverWrite(new ObjectExcelSymbolConverter(data));
+                book.SaveAs(Path.Combine(TestEnvironment.TestResultsPath, "QR.xlsx"));
+            }
+
+            using var outStream = ExcelConverter.ConvertToPdf(Path.Combine(TestEnvironment.TestResultsPath, "QR.xlsx"));
+            File.WriteAllBytes(Path.Combine(TestEnvironment.TestResultsPath, "QR.pdf"), outStream.ToArray());
+        }
+
+        [Test]
+        public async Task Image()
+        {
+            var data = new SimpleData { Bin = Resources.ImageSample };
+
+            using (var stream = new FileStream(Path.Combine(TestEnvironment.PdfSrcPath, "Image.xlsx"), FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+            using (var book = new XLWorkbook(stream))
+            {
+                await book.OverWrite(new ObjectExcelSymbolConverter(data));
+                book.SaveAs(Path.Combine(TestEnvironment.TestResultsPath, "Image.xlsx"));
+            }
+
+            using var outStream = ExcelConverter.ConvertToPdf(Path.Combine(TestEnvironment.TestResultsPath, "Image.xlsx"));
+            File.WriteAllBytes(Path.Combine(TestEnvironment.TestResultsPath, "Image.pdf"), outStream.ToArray());
         }
     }
 }

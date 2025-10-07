@@ -1,4 +1,5 @@
 ﻿using ClosedXML.Excel;
+using QRCoder;
 using System.Collections;
 
 namespace Excel.Report.PDF
@@ -322,7 +323,93 @@ namespace Excel.Report.PDF
             {
                 var cellIndex = i + 1;
                 var text = sheet.GetText(rowIndex, cellIndex).Trim();
-                if (text.StartsWith("$"))
+                if (text.StartsWith("#Image"))
+                {
+                    var args = text.Replace("#Image", "").Replace("(", "").Replace(")", "").Split(',').Select(e => e.Trim()).ToArray();
+                    var imageVariable = string.Empty;
+                    if (0 < args.Length)
+                    {
+                        imageVariable = args[0];
+                    }
+                    double? widthScale = null;
+                    if (1 < args.Length)
+                    {
+                        if (double.TryParse(args[1], out var v)) widthScale = v;
+                    }
+                    double? heightScale = null;
+                    if (2 < args.Length)
+                    {
+                        if (double.TryParse(args[2], out var v)) heightScale = v;
+                    }
+                    if (!imageVariable.StartsWith("$")) continue;
+
+                    var x = await converter(imageVariable.Substring(1));
+                    var stream = x?.Value as Stream;
+                    IDisposable? disposeTarget = null;
+                    if (stream == null)
+                    {
+                        var bin = x?.Value as byte[];
+                        if (bin != null)
+                        {
+                            stream = new MemoryStream(bin);
+                            disposeTarget = stream;
+                        }
+                    }
+                    if (stream == null) continue;
+
+                    var image = sheet.AddPicture(stream);
+                    image.MoveTo(sheet.Cell(rowIndex, cellIndex), 0, 0);
+                    if (widthScale != null)
+                    {
+                        image.ScaleWidth(widthScale.Value);
+                    }
+                    if (heightScale != null)
+                    {
+                        image.ScaleHeight(heightScale.Value);
+                    }
+                    sheet.Cell(rowIndex, cellIndex).SetValue(XLCellValue.FromObject(null));
+                    disposeTarget?.Dispose();
+                }
+                else if (text.StartsWith("#QR"))
+                {
+                    var args = text.Replace("#QR", "").Replace("(", "").Replace(")", "").Split(',').Select(e => e.Trim()).ToArray();
+                    var qrText = string.Empty;
+                    if (0 < args.Length)
+                    {
+                        qrText = args[0];
+                    }
+                    int size = 10;
+                    if (1 < args.Length)
+                    {
+                        if (int.TryParse(args[1], out var v)) size = v;
+                    }
+                    if (qrText.StartsWith("$"))
+                    {
+                        var x = await converter(qrText.Substring(1));
+                        qrText = x?.Value?.ToString() ?? string.Empty;
+                    }
+                    else if (qrText.StartsWith("\"") && qrText.EndsWith("\""))
+                    {
+                        qrText = qrText[1..^1];
+                    }
+                    if (!string.IsNullOrEmpty(qrText))
+                    {
+                        using var gen = new QRCodeGenerator();
+                        using var data = gen.CreateQrCode(text, QRCodeGenerator.ECCLevel.M);
+
+                        var png = new PngByteQRCode(data);
+                        var bytes = png.GetGraphic(
+                            pixelsPerModule: size,
+                            darkColorRgba: new byte[] { 0, 0, 0, 255 },
+                            lightColorRgba: new byte[] { 255, 255, 255, 255 },
+                            drawQuietZones: true);
+                        using var stream = new MemoryStream(bytes);
+                        var image = sheet.AddPicture(stream);
+                        image.MoveTo(sheet.Cell(rowIndex, cellIndex), 0, 0);
+                    }
+                    sheet.Cell(rowIndex, cellIndex).SetValue(XLCellValue.FromObject(null));
+                }
+                else if (text.StartsWith("$"))
                 {
                     var x = await converter(text.Substring(1));
                     SetCellData(sheet, rowIndex, cellIndex, x);

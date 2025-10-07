@@ -63,6 +63,16 @@ namespace Test.Properties {
         /// <summary>
         ///   型 System.Byte[] のローカライズされたリソースを検索します。
         /// </summary>
+        internal static byte[] ImageSample {
+            get {
+                object obj = ResourceManager.GetObject("ImageSample", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   型 System.Byte[] のローカライズされたリソースを検索します。
+        /// </summary>
         internal static byte[] ipag {
             get {
                 object obj = ResourceManager.GetObject("ipag", resourceCulture);
