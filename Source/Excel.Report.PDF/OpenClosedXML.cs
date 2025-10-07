@@ -279,7 +279,7 @@ namespace Excel.Report.PDF
 
         IXLRange[] GetPageRanges(IXLWorksheet ws, WorksheetPart worksheetPart, PageBreakInfo? pageBreakInfo = null)
         {
-            GetSheetMaxRowCol(worksheetPart, out var maxRow, out var maxColumn);
+            GetSheetMaxRowCol(ws, worksheetPart, out var maxRow, out var maxColumn);
             if (maxRow == 0 || maxColumn == 0) return new IXLRange[0];
 
             if (pageBreakInfo == null)
@@ -450,25 +450,33 @@ namespace Excel.Report.PDF
         }
 
         internal void GetSheetMaxRowCol(int sheetPos, out int maxRow, out int maxColumn)
-            => GetSheetMaxRowCol(GetWorkSheetPartByPosition(sheetPos), out maxRow, out maxColumn);
+            => GetSheetMaxRowCol(Workbook.Worksheet(sheetPos), GetWorkSheetPartByPosition(sheetPos), out maxRow, out maxColumn);
 
-        void GetSheetMaxRowCol(WorksheetPart worksheetPart, out int maxRow, out int maxColumn)
+        void GetSheetMaxRowCol(IXLWorksheet ws, WorksheetPart worksheetPart, out int maxRow, out int maxColumn)
         {
+            var picPositions = ws.Pictures
+                .OfType<IXLPicture>()
+                .Select(p => new
+                {
+                    Row = p.TopLeftCell.Address.RowNumber,
+                    Column = p.TopLeftCell.Address.ColumnNumber
+                })
+                .ToList();
+            maxRow = picPositions.Any() ? picPositions.Max(e=>e.Row) : 1;
+            maxColumn = picPositions.Any() ? picPositions.Max(e => e.Column) : 1;
+
             // 1. Enumerate all rows and cells
             var rows = worksheetPart.Worksheet.Descendants<Row>();
 
             if (!rows.Any())
             {
-                maxRow = 0;
-                maxColumn = 0;
                 return;
             }
 
             // 2. Calculate the minimum and maximum range
             uint uintMaxRow = rows.Max(r => r.RowIndex) ?? 0;
-            maxRow = (int)uintMaxRow;
+            maxRow = Math.Max(maxRow, (int)uintMaxRow);
 
-            maxColumn = int.MinValue;
             foreach (var row in rows)
             {
                 var cells = row.Elements<Cell>();
@@ -481,12 +489,6 @@ namespace Excel.Report.PDF
                         if (columnIndex > maxColumn) maxColumn = columnIndex;
                     }
                 }
-            }
-
-            // 3. If the column does not exist
-            if (maxColumn == int.MinValue)
-            {
-                maxColumn = 1; // Column A
             }
         }
 
