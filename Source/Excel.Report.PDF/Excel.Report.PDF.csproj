@@ -5,7 +5,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
-    <Version>0.23.0</Version>
+    <Version>0.24.0</Version>
     <Description>You can convert Excel to PDF.</Description>
     <PackageProjectUrl>https://github.com/Codeer-Software/Excel.Report.PDF</PackageProjectUrl>
     <RepositoryUrl>https://github.com/Codeer-Software/Excel.Report.PDF</RepositoryUrl>
@@ -13,8 +13,8 @@
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
 	<PackageReleaseNotes>
-		# Bug fixes
-		- Fixed QR code fraud.
+		# Adjustment
+		- Support Excel.Report.PrintDocument.
 	</PackageReleaseNotes>
   </PropertyGroup>
 
