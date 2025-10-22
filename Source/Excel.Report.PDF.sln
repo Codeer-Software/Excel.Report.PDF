@@ -7,6 +7,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Excel.Report.PDF", "Excel.R
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Test", "Test\Test\Test.csproj", "{72F8F7D9-BED5-4E2D-8FEE-03589B522063}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Excel.Report.PrintDocument", "Excel.Report.PrintDocument\Excel.Report.PrintDocument.csproj", "{A434B66F-0009-E1E9-85C6-AFDC22DF26DF}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{72F8F7D9-BED5-4E2D-8FEE-03589B522063}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{72F8F7D9-BED5-4E2D-8FEE-03589B522063}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{72F8F7D9-BED5-4E2D-8FEE-03589B522063}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A434B66F-0009-E1E9-85C6-AFDC22DF26DF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A434B66F-0009-E1E9-85C6-AFDC22DF26DF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A434B66F-0009-E1E9-85C6-AFDC22DF26DF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A434B66F-0009-E1E9-85C6-AFDC22DF26DF}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

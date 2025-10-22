@@ -1,0 +1,40 @@
+﻿using Excel.Report.PDF;
+using System.Drawing.Printing;
+using System.Runtime.Versioning;
+
+namespace Excel.Report.PrintDocument
+{
+    [SupportedOSPlatform("windows")]
+    public class ExcelPrintDocumentBinder
+    {
+        public static void Bind(System.Drawing.Printing.PrintDocument doc, string filePath)
+        {
+            using var mem = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+            Bind(doc, mem);
+        }
+
+        public static void Bind(System.Drawing.Printing.PrintDocument doc, Stream stream)
+        {
+            using var openClosedXML = new OpenClosedXML(stream);
+            var converter = new PrintDocumentRender(openClosedXML);
+            var document = new VirtualDocument();
+            converter.RenderTo(document);
+            converter.PostProcessCommands.ExecuteAll();
+
+            int pageIndex = 0;
+            void OnPrintPage(object? sender, PrintPageEventArgs e)
+            {
+                document.DrawTo(e.Graphics!);
+                pageIndex++;
+                e.HasMorePages = pageIndex < document.PageCount;
+            }
+            void OnEndPrint(object? sender, PrintEventArgs e)
+            {
+                doc.PrintPage -= OnPrintPage;
+                doc.EndPrint -= OnEndPrint;
+            }
+            doc.PrintPage += OnPrintPage;
+            doc.EndPrint += OnEndPrint;
+        }
+    }
+}
