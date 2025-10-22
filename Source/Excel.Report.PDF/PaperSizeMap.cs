@@ -19,7 +19,7 @@ namespace Excel.Report.PDF
             return page;
         }
 
-        static (XUnit w, XUnit h) GetPaperSize(XLPaperSize s) => s switch
+        internal static (XUnit w, XUnit h) GetPaperSize(XLPaperSize s) => s switch
         {
             // US（inch）
             XLPaperSize.LetterPaper or XLPaperSize.LetterSmallPaper or XLPaperSize.NotePaper

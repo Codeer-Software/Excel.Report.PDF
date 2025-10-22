@@ -368,7 +368,6 @@ namespace Excel.Report.PDF
                 if (lines.Length != 1) return false;
                 var line = lines[0];
 
-                //ここで覚える
                 Action action = () => { };
                 if (line == "#Page")
                 {
