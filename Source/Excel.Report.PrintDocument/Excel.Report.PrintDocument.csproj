@@ -1,14 +1,27 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
+	  <TargetFramework>net6.0</TargetFramework>
+	  <ImplicitUsings>enable</ImplicitUsings>
+	  <Nullable>enable</Nullable>
+	  <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+	  <Version>0.25.0</Version>
+	  <Description>You can write Excel content to PrintDocument.</Description>
+	  <PackageProjectUrl>https://github.com/Codeer-Software/Excel.Report.PDF</PackageProjectUrl>
+	  <RepositoryUrl>https://github.com/Codeer-Software/Excel.Report.PDF</RepositoryUrl>
+	  <PackageTags>Excel;PDF;ExcelToPDF;Excel2PDF;Printer;PrintDocument</PackageTags>
+	  <PackageLicenseExpression>MIT</PackageLicenseExpression>
+	  <PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
+	  <PackageReleaseNotes>
+	  </PackageReleaseNotes>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Excel.Report.PDF" Version="0.25.0" />
     <PackageReference Include="System.Drawing.Common" Version="8.0.21" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Excel.Report.PDF\Excel.Report.PDF.csproj" />
   </ItemGroup>
 
 </Project>
