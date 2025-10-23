@@ -60,6 +60,6 @@ namespace Excel.Report.PrintDocument
             return page;
         }
 
-        public void DrawTo(Graphics g)=> _pages.ForEach(p => p.DrawTo(g));
+        public void DrawTo(Graphics g, int page)=> _pages[page].DrawTo(g);
     }
 }

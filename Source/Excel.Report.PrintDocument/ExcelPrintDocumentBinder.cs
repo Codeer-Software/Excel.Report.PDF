@@ -24,7 +24,7 @@ namespace Excel.Report.PrintDocument
             int pageIndex = 0;
             void OnPrintPage(object? sender, PrintPageEventArgs e)
             {
-                document.DrawTo(e.Graphics!);
+                document.DrawTo(e.Graphics!, pageIndex);
                 pageIndex++;
                 e.HasMorePages = pageIndex < document.PageCount;
             }
