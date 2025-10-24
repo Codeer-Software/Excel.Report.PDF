@@ -7,6 +7,8 @@ namespace Excel.Report.PrintDocument
     [SupportedOSPlatform("windows")]
     public class ExcelPrintDocumentBinder
     {
+        //TODO GetPrintSettings
+
         public static void Bind(System.Drawing.Printing.PrintDocument doc, string filePath)
         {
             using var mem = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
@@ -21,6 +23,7 @@ namespace Excel.Report.PrintDocument
             converter.RenderTo(document);
             converter.PostProcessCommands.ExecuteAll();
 
+            //TODO Orientation and margin settings
             int pageIndex = 0;
             void OnPrintPage(object? sender, PrintPageEventArgs e)
             {

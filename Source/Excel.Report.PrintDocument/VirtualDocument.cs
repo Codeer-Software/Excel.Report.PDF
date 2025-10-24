@@ -14,8 +14,11 @@ namespace Excel.Report.PrintDocument
             => _actions = actions;
 
         internal void DrawImage(XImage image, double x, double y, double width, double height)
-            => _actions.Add(g => g.DrawImage(image, x, y, width, height));
-
+        { 
+            //TODO If you don't take it first, it will be discarded.
+            var img = image.TryExtractGdiImage();
+            _actions.Add(g => g.DrawImage(img!, x, y, width, height));
+        }
         internal void Restore()
             => _actions.Add(g => g.ResetTransform());
 

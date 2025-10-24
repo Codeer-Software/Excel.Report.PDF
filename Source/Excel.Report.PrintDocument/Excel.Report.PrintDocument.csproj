@@ -5,7 +5,7 @@
 	  <ImplicitUsings>enable</ImplicitUsings>
 	  <Nullable>enable</Nullable>
 	  <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
-	  <Version>0.25.0</Version>
+	  <Version>0.26.0</Version>
 	  <Description>You can write Excel content to PrintDocument.</Description>
 	  <PackageProjectUrl>https://github.com/Codeer-Software/Excel.Report.PDF</PackageProjectUrl>
 	  <RepositoryUrl>https://github.com/Codeer-Software/Excel.Report.PDF</RepositoryUrl>

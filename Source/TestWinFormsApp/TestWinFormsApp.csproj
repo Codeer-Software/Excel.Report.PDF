@@ -10,7 +10,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Excel.Report.PrintDocument\Excel.Report.PrintDocument.csproj" />
-    <ProjectReference Include="..\Test\Test\Test.csproj" />
   </ItemGroup>
 
 </Project>

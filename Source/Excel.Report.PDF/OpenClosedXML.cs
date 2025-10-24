@@ -550,6 +550,7 @@ namespace Excel.Report.PDF
             var allCells = new List<List<CellInfo>>();
             foreach (var range in ranges)
             {
+                //TODO It would be better to be able to pass margin and scaling from higher level. It would be more flexible.
                 var (marginX, marginY) = GetMargin(pageSetup, pdfWidthSrc, pdfHeightSrc, range);
 
                 double yOffset = 0;
@@ -646,6 +647,7 @@ namespace Excel.Report.PDF
             return allCells;
         }
 
+        //TODO There's no need for merge settings like this, maybe it's a remnant from when we were doing things like zoom ratios?
         static (double marginX, double marginY) GetMargin(IXLPageSetup pageSetup, double pdfWidthSrc, double pdfHeightSrc, IXLRange range)
         {
             var marginLeft = InchToPoint(pageSetup.Margins.Left);

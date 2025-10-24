@@ -1,22 +1,17 @@
-﻿using System.Drawing;
+﻿using PdfSharp.Drawing;
+using System.Drawing;
 using System.Drawing.Drawing2D;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.Versioning;
-using PdfSharp.Drawing;
 
 namespace Excel.Report.PrintDocument
 {
     [SupportedOSPlatform("windows")]
     static class GraphicsCompatibleExtensions
     {
-        internal static void DrawImage(this Graphics gfx, XImage image, double x, double y, double width, double height)
+        internal static void DrawImage(this Graphics gfx, Image gdimg, double x, double y, double width, double height)
         {
-            if (gfx is null) throw new ArgumentNullException(nameof(gfx));
-            if (image is null) throw new ArgumentNullException(nameof(image));
-
-            var gdimg = image.TryExtractGdiImage()
-                        ?? throw new NotSupportedException("Could not extract underlying GDI+ Image from XImage.");
-
             gfx.DrawImage(
                 gdimg,
                 new RectangleF(gfx.PtToGUx(x), gfx.PtToGUy(y), gfx.PtToGUx(width), gfx.PtToGUy(height))
@@ -185,17 +180,12 @@ namespace Excel.Report.PrintDocument
             return new Font(family, (float)size, style, GraphicsUnit.Point);
         }
 
-        static Image? TryExtractGdiImage(this XImage xi)
+        //TODO
+        internal static Image? TryExtractGdiImage(this XImage xi)
         {
-            var t = xi.GetType();
-            var prop = t.GetProperty("GdiImage") ?? t.GetProperty("Image");
-            if (prop?.GetValue(xi) is Image pi) return pi;
-
-            var fld = t.GetField("gdiImage", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
-                   ?? t.GetField("image", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            if (fld?.GetValue(xi) is Image fi) return fi;
-
-            return null;
+            var fld = xi.GetType().GetField("_stream", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
+            if (fld?.GetValue(xi) is not Stream s) return null;
+            var p = s.Position; s.Position = 0; using var img = Image.FromStream(s, true, true); s.Position = p; return (Image)img.Clone();
         }
     }
 }

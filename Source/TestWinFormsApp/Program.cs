@@ -1,6 +1,4 @@
 using PdfSharp.Fonts;
-using Test;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement.StartPanel;
 
 namespace TestWinFormsApp
 {
@@ -12,7 +10,7 @@ namespace TestWinFormsApp
         [STAThread]
         static void Main()
         {
-            GlobalFontSettings.FontResolver = new CustomFontResolver();
+            GlobalFontSettings.FontResolver = new WindowsInstalledFontResolver();
 
             // To customize application configuration such as set high DPI settings or default font,
             // see https://aka.ms/applicationconfiguration.
