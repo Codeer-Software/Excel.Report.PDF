@@ -6,7 +6,7 @@
 	  <Nullable>enable</Nullable>
 	  <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
 	  <Version>0.26.0</Version>
-	  <Description>You can write Excel content to PrintDocument.</Description>
+	  <Description>Functions can now be added externally.</Description>
 	  <PackageProjectUrl>https://github.com/Codeer-Software/Excel.Report.PDF</PackageProjectUrl>
 	  <RepositoryUrl>https://github.com/Codeer-Software/Excel.Report.PDF</RepositoryUrl>
 	  <PackageTags>Excel;PDF;ExcelToPDF;Excel2PDF;Printer;PrintDocument</PackageTags>
