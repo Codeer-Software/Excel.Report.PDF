@@ -47,7 +47,13 @@ namespace Excel.Report.PrintDocument
                     _ => StringAlignment.Near
                 }
             };
-            gfx.DrawString(text ?? string.Empty, gfont, gbrush, gfx.ToRectGU(layoutRectangle), gfmt);
+            gfmt.FormatFlags |= StringFormatFlags.NoClip;
+            
+            //Adjuctment
+            var rect = gfx.ToRectGU(layoutRectangle);
+            if (gfmt.LineAlignment != StringAlignment.Center) rect.Height += (gfont.Height / 4);
+
+            gfx.DrawString(text ?? string.Empty, gfont, gbrush, rect, gfmt);
         }
 
         internal static void TranslateTransform(this Graphics gfx, double dx, double dy)
@@ -185,7 +191,10 @@ namespace Excel.Report.PrintDocument
         {
             var fld = xi.GetType().GetField("_stream", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
             if (fld?.GetValue(xi) is not Stream s) return null;
-            var p = s.Position; s.Position = 0; using var img = Image.FromStream(s, true, true); s.Position = p; return (Image)img.Clone();
+            var p = s.Position; s.Position = 0; 
+            using var img = Image.FromStream(s, true, true); 
+            s.Position = p; 
+            return (Image)img.Clone();
         }
     }
 }
