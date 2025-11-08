@@ -14,7 +14,7 @@ namespace Excel.Report.PrintDocument
         {
             gfx.DrawImage(
                 gdimg,
-                new RectangleF(gfx.PtToGUx(x), gfx.PtToGUy(y), gfx.PtToGUx(width), gfx.PtToGUy(height))
+                new RectangleF((float)x, (float)y, (float)width, (float)height)
             );
         }
 
@@ -48,7 +48,7 @@ namespace Excel.Report.PrintDocument
                 }
             };
             gfmt.FormatFlags |= StringFormatFlags.NoClip;
-            
+
             //Adjuctment
             var rect = gfx.ToRectGU(layoutRectangle);
             if (gfmt.LineAlignment != StringAlignment.Center) rect.Height += (gfont.Height / 4);
@@ -65,51 +65,31 @@ namespace Excel.Report.PrintDocument
                 _states.Add(gfx, stack);
             }
             stack.Push(gfx.Save());
-            gfx.TranslateTransform(gfx.PtToGUx(dx), gfx.PtToGUy(dy));
+            gfx.TranslateTransform(dx, dy);
         }
 
         internal static void DrawRectangle(this Graphics gfx, XBrush brush, double x, double y, double width, double height)
         {
             if (gfx is null) throw new ArgumentNullException(nameof(gfx));
             using var gbrush = brush.ToGdiBrush();
-            gfx.FillRectangle(gbrush, gfx.PtToGUx(x), gfx.PtToGUy(y), gfx.PtToGUx(width), gfx.PtToGUy(height));
+            gfx.FillRectangle(gbrush, (float)x, (float)y, (float)width, (float)height);
         }
 
         internal static void DrawLine(this Graphics gfx, XPen pen, double x1, double y1, double x2, double y2)
         {
             if (gfx is null) throw new ArgumentNullException(nameof(gfx));
             using var gpen = gfx.ToGdiPen(pen);
-            gfx.DrawLine(gpen, gfx.PtToGUx(x1), gfx.PtToGUy(y1), gfx.PtToGUx(x2), gfx.PtToGUy(y2));
+            gfx.DrawLine(gpen, (float)x1, (float)y1, (float)x2, (float)y2);
         }
 
         static readonly ConditionalWeakTable<Graphics, Stack<GraphicsState>> _states = new();
 
-        static float PtToGUx(this Graphics g, double pt) => (float)pt;/*(g.PageUnit switch
-        {
-            GraphicsUnit.Point => pt,                 // 1 pt
-            GraphicsUnit.Display => pt * 100.0 / 72.0,  // 1/100 in
-            GraphicsUnit.Document => pt * 300.0 / 72.0,  // 1/300 in
-            GraphicsUnit.Inch => pt / 72.0,          // 1 in
-            GraphicsUnit.Millimeter => pt * 25.4 / 72.0,   // 1 mm
-            GraphicsUnit.Pixel => pt * g.DpiX / 72.0, // pixel (X)
-            _ => pt //World etc
-        });*/
-
-        static float PtToGUy(this Graphics g, double pt) => (float)pt; /*(g.PageUnit switch
-        {
-            GraphicsUnit.Point => pt,
-            GraphicsUnit.Display => pt * 100.0 / 72.0,
-            GraphicsUnit.Document => pt * 300.0 / 72.0,
-            GraphicsUnit.Inch => pt / 72.0,
-            GraphicsUnit.Millimeter => pt * 25.4 / 72.0,
-            GraphicsUnit.Pixel => pt * g.DpiY / 72.0, // pixel (Y)
-            _ => pt
-        });*/
-
         static RectangleF ToRectGU(this Graphics g, XRect r) =>
             new RectangleF(
-                g.PtToGUx(r.X), g.PtToGUy(r.Y),
-                g.PtToGUx(r.Width), g.PtToGUy(r.Height)
+                (float)r.X,
+                (float)r.Y,
+               (float)r.Width,
+                (float)r.Height
             );
 
         static Pen ToGdiPen(this Graphics g, XPen pen)
@@ -120,7 +100,7 @@ namespace Excel.Report.PrintDocument
             var c = pen.Color;
             var gc = Color.FromArgb(ToByte(c.A), ToByte(c.R), ToByte(c.G), ToByte(c.B));
 
-            var p = new Pen(gc, g.PtToGUx(pen.Width));
+            var p = new Pen(gc, (float)pen.Width);
             p.DashStyle = pen.DashStyle switch
             {
                 XDashStyle.Solid => DashStyle.Solid,
@@ -191,9 +171,9 @@ namespace Excel.Report.PrintDocument
         {
             var fld = xi.GetType().GetField("_stream", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
             if (fld?.GetValue(xi) is not Stream s) return null;
-            var p = s.Position; s.Position = 0; 
-            using var img = Image.FromStream(s, true, true); 
-            s.Position = p; 
+            var p = s.Position; s.Position = 0;
+            using var img = Image.FromStream(s, true, true);
+            s.Position = p;
             return (Image)img.Clone();
         }
     }
