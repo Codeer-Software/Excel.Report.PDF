@@ -28,7 +28,7 @@ namespace Excel.Report.PrintDocument
             void OnPrintPage(object? sender, PrintPageEventArgs e)
             {
                 //TODO add initilize actions.
-
+                e.Graphics!.PageUnit = System.Drawing.GraphicsUnit.Point;
                 document.DrawTo(e.Graphics!, pageIndex);
                 pageIndex++;
                 e.HasMorePages = pageIndex < document.PageCount;

@@ -84,7 +84,7 @@ namespace Excel.Report.PrintDocument
 
         static readonly ConditionalWeakTable<Graphics, Stack<GraphicsState>> _states = new();
 
-        static float PtToGUx(this Graphics g, double pt) => (float)(g.PageUnit switch
+        static float PtToGUx(this Graphics g, double pt) => (float)pt;/*(g.PageUnit switch
         {
             GraphicsUnit.Point => pt,                 // 1 pt
             GraphicsUnit.Display => pt * 100.0 / 72.0,  // 1/100 in
@@ -93,9 +93,9 @@ namespace Excel.Report.PrintDocument
             GraphicsUnit.Millimeter => pt * 25.4 / 72.0,   // 1 mm
             GraphicsUnit.Pixel => pt * g.DpiX / 72.0, // pixel (X)
             _ => pt //World etc
-        });
+        });*/
 
-        static float PtToGUy(this Graphics g, double pt) => (float)(g.PageUnit switch
+        static float PtToGUy(this Graphics g, double pt) => (float)pt; /*(g.PageUnit switch
         {
             GraphicsUnit.Point => pt,
             GraphicsUnit.Display => pt * 100.0 / 72.0,
@@ -104,7 +104,7 @@ namespace Excel.Report.PrintDocument
             GraphicsUnit.Millimeter => pt * 25.4 / 72.0,
             GraphicsUnit.Pixel => pt * g.DpiY / 72.0, // pixel (Y)
             _ => pt
-        });
+        });*/
 
         static RectangleF ToRectGU(this Graphics g, XRect r) =>
             new RectangleF(
