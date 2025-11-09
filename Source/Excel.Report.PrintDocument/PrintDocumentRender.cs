@@ -1,11 +1,9 @@
 using ClosedXML.Excel;
 using Excel.Report.PDF;
 using PdfSharp.Drawing;
-using System.Runtime.Versioning;
 
 namespace Excel.Report.PrintDocument
 {
-    [SupportedOSPlatform("windows")]
     class PrintDocumentRender
     {
         class PageProcessCommand : IPostProcessCommand
@@ -15,19 +13,13 @@ namespace Excel.Report.PrintDocument
             public void Execute() => Action();
         }
 
-        class GraphicsDisposeCommand : IPostProcessCommand
-        {
-            public List<VirtualGraphics> Graphics { get; set; } = new();
-            public void Execute() { }
-        }
-
         readonly OpenClosedXML _openClosedXML;
         internal List<IPostProcessCommand> PostProcessCommands { get; } = new();
 
         internal PrintDocumentRender(OpenClosedXML openClosedXML)
             => _openClosedXML = openClosedXML;
 
-        internal void RenderTo(VirtualDocument pdf)
+        internal void RenderTo(IVirtualDocument pdf)
         {
             for (int i = 1; i <= _openClosedXML.SheetCount; i++)
             {
@@ -35,34 +27,24 @@ namespace Excel.Report.PrintDocument
             }
         }
 
-        internal void RenderTo(VirtualDocument pdf, int sheetPosition, PageBreakInfo? pageBreakInfo)
+        internal void RenderTo(IVirtualDocument pdf, int sheetPosition, PageBreakInfo? pageBreakInfo)
         {
             var ps = _openClosedXML.GetPageSetup(sheetPosition);
             var page = pdf.AddPage(ps);
             var size = PaperSizeMap.GetPaperSize(ps.PaperSize);
             var allCells = _openClosedXML.GetCellInfo(sheetPosition, OpenClosedXML.PixelToPoint(size.w.Point), OpenClosedXML.PixelToPoint(size.h.Point), out var scaling, pageBreakInfo);
 
-            GraphicsDisposeCommand graphicsDisposer = new();
-            RenderTo(graphicsDisposer, pdf, ps, page, allCells, scaling);
-            if (PostProcessCommands.Any())
-            {
-                PostProcessCommands.Add(graphicsDisposer);
-            }
-            else
-            {
-                graphicsDisposer.Execute();
-            }
+            RenderTo(pdf, ps, page, allCells, scaling);
         }
 
-        void RenderTo(GraphicsDisposeCommand graphicsDisposer, VirtualDocument pdf, IXLPageSetup ps, VirtualPage pageSrc, List<List<CellInfo>> allCells, double scaling)
+        void RenderTo(IVirtualDocument pdf, IXLPageSetup ps, IVirtualPage pageSrc, List<List<CellInfo>> allCells, double scaling)
         {
-            VirtualPage? page = pageSrc;
+            IVirtualPage? page = pageSrc;
             for (int i = 0; i < allCells.Count; i++)
             {
                 if (page == null) page = pdf.AddPage(ps);
                 var currentPage = page;
                 var gfx = page.CreateGraphics();
-                graphicsDisposer.Graphics.Add(gfx);
                 page = null;
                 var drawLineCache = new DrawLineCache(gfx);
 
@@ -95,7 +77,7 @@ namespace Excel.Report.PrintDocument
             }
         }
 
-        void FillCellBackColor(VirtualGraphics gfx, CellInfo cellInfo)
+        void FillCellBackColor(IVirtualGraphics gfx, CellInfo cellInfo)
         {
             var cell = cellInfo.Cell!;
             if (cellInfo.MergedFirstCell != null) cell = cellInfo.MergedFirstCell.Cell!;
@@ -111,9 +93,9 @@ namespace Excel.Report.PrintDocument
         // If you draw two lines in the same place, it will be darker, so skip the second one.
         class DrawLineCache
         {
-            VirtualGraphics _gfx;
+            IVirtualGraphics _gfx;
             Dictionary<string, bool> _cache = new Dictionary<string, bool>();
-            public DrawLineCache(VirtualGraphics gfx) => _gfx = gfx;
+            public DrawLineCache(IVirtualGraphics gfx) => _gfx = gfx;
 
             public void DrawLine(XPen xPen, double x1, double y1, double x2, double y2)
             {
@@ -259,7 +241,7 @@ namespace Excel.Report.PrintDocument
                 cellInfo.X, cellInfo.Y + cellInfo.Height, cellInfo.X, cellInfo.Y, IsDrawLeft(cellInfo));
         }
 
-        void DrawCellText(VirtualDocument pdf, VirtualPage page, VirtualGraphics currentXG, double scaling, CellInfo cellInfo)
+        void DrawCellText(IVirtualDocument pdf, IVirtualPage page, IVirtualGraphics currentXG, double scaling, CellInfo cellInfo)
         {
             var cell = cellInfo.Cell!;
 
@@ -403,7 +385,7 @@ namespace Excel.Report.PrintDocument
             }
 
             // Vertical writing (Excel stack): place characters top→bottom, advance columns left→right
-            static void DrawVerticalStack(VirtualGraphics g, XFont f, XBrush b, XRect r, XStringFormat fmt, string[] cols)
+            static void DrawVerticalStack(IVirtualGraphics g, XFont f, XBrush b, XRect r, XStringFormat fmt, string[] cols)
             {
                 double step = f.Height;                 // one cell
                 double totalW = cols.Length * step;
@@ -438,7 +420,7 @@ namespace Excel.Report.PrintDocument
             }
 
             // Arbitrary-angle drawing: rotate the coordinate system around the rectangle center (do not swap width/height)
-            static void DrawRotated(VirtualGraphics g, XFont f, XBrush b, XRect r, XStringFormat fmt, string[] content, int angle)
+            static void DrawRotated(IVirtualGraphics g, XFont f, XBrush b, XRect r, XStringFormat fmt, string[] content, int angle)
             {
                 g.Save();
 
@@ -475,7 +457,7 @@ namespace Excel.Report.PrintDocument
             }
         }
 
-        static void DrawPictures(VirtualGraphics gfx, PictureInfoAndCellInfo item)
+        static void DrawPictures(IVirtualGraphics gfx, PictureInfoAndCellInfo item)
         {
             item.PictureInfo.Picture!.Position = 0;
             gfx.DrawImage(item.PictureInfo.Picture!,
