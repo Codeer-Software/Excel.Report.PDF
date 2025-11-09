@@ -21,19 +21,38 @@ namespace Excel.Report.PrintDocument
             _disposables.Add(image);
             _actions.Add(g => g.DrawImage(image, x, y, width, height));
         }
-        public void Restore()
-            => _actions.Add(g => g.Restore());
+
+        public void Restore() => _actions.Add(g => g.Restore());
 
         public void DrawString(string text, VirtualFont vFont, VirtualColor vBrush, VirtualRect vRect, VirtualStringFormat vFormat)
         {
-            var fontStyle = XFontStyleEx.Regular;
-            if (vFont.Core.Bold) fontStyle |= XFontStyleEx.Bold;
-            if (vFont.Core.Italic) fontStyle |= XFontStyleEx.Italic;
-            if (vFont.Core.Underline != XLFontUnderlineValues.None) fontStyle |= XFontStyleEx.Underline;
-
-            var font = new XFont(vFont.Core.FontName, vFont.Core.FontSize * vFont.Scaling, fontStyle);
+            var font = ConvertToXFont(vFont);
             var brush = new XSolidBrush(ConvertToXColor(vBrush));
             var rect = new XRect(vRect.X, vRect.Y, vRect.Width, vRect.Height);
+            var format = ConvertToXStringFormat(vFormat);
+            _actions.Add(g => g.DrawString(text, font, brush, rect, format));
+        }
+
+        public void TranslateTransform(double dx, double dy)
+            => _actions.Add(g => g.TranslateTransform(dx, dy));
+
+        public void DrawRectangle(VirtualColor vBrush, double x, double y, double width, double height)
+            => _actions.Add(g => g.DrawRectangle(new XSolidBrush(ConvertToXColor(vBrush)), x, y, width, height));
+
+        public void DrawLine(VirtualPen pen, double x1, double y1, double x2, double y2)
+            => _actions.Add(g => g.DrawLine(ConvertToXPen(pen), x1, y1, x2, y2));
+
+        public void Save()
+            => _actions.Add(g => g.Save());
+
+        public void RotateTransform(int angle)
+            => _actions.Add(g => g.RotateTransform(angle));
+
+        public double GetFontHeight(VirtualFont vFont)
+            => ConvertToXFont(vFont).GetHeight();
+
+        static XStringFormat ConvertToXStringFormat(VirtualStringFormat vFormat)
+        {
             var format = new XStringFormat();
             format.Alignment = vFormat.Alignment switch
             {
@@ -49,30 +68,10 @@ namespace Excel.Report.PrintDocument
                 VirtualAlignment.Far => XLineAlignment.Far,
                 _ => XLineAlignment.Near
             };
-
-
-            _actions.Add(g => g.DrawString(text, font, brush, rect, format));
+            return format;
         }
 
-        public void TranslateTransform(double dx, double dy)
-            => _actions.Add(g => g.TranslateTransform(dx, dy));
-
-        public void DrawRectangle(VirtualColor vBrush, double x, double y, double width, double height)
-        {
-            var brush = new XSolidBrush(ConvertToXColor(vBrush));
-            _actions.Add(g => g.DrawRectangle(brush, x, y, width, height));
-        }
-
-        public void DrawLine(VirtualPen pen, double x1, double y1, double x2, double y2)
-            => _actions.Add(g => g.DrawLine(ConvertToXPen(pen), x1, y1, x2, y2));
-
-        public void Save()
-            => _actions.Add(g => g.Save());
-
-        public void RotateTransform(int angle)
-            => _actions.Add(g => g.RotateTransform(angle));
-
-        public double GetFontHeight(VirtualFont vFont)
+        static XFont ConvertToXFont(VirtualFont vFont)
         {
             var fontStyle = XFontStyleEx.Regular;
             if (vFont.Core.Bold) fontStyle |= XFontStyleEx.Bold;
@@ -80,7 +79,7 @@ namespace Excel.Report.PrintDocument
             if (vFont.Core.Underline != XLFontUnderlineValues.None) fontStyle |= XFontStyleEx.Underline;
 
             var font = new XFont(vFont.Core.FontName, vFont.Core.FontSize * vFont.Scaling, fontStyle);
-            return font.Height;
+            return font;
         }
 
         static XColor ConvertToXColor(VirtualColor vColor)
