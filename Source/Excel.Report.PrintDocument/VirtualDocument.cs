@@ -9,14 +9,19 @@ namespace Excel.Report.PrintDocument
     class VirtualGraphics
     {
         List<Action<Graphics>> _actions;
+        List<IDisposable> _disposables;
 
-        internal VirtualGraphics(List<Action<Graphics>> actions)
-            => _actions = actions;
+        internal VirtualGraphics(List<Action<Graphics>> actions, List<IDisposable> disposables)
+        {
+            _actions = actions;
+            _disposables = disposables;
+        }
 
         internal void DrawImage(XImage image, double x, double y, double width, double height)
         { 
-            //TODO If you don't take it first, it will be discarded.
+            //If you don't take it first, it will be discarded.
             var img = image.TryExtractGdiImage();
+            _disposables.Add(img!);
             _actions.Add(g => g.DrawImage(img!, x, y, width, height));
         }
         internal void Restore()
@@ -44,11 +49,16 @@ namespace Excel.Report.PrintDocument
     [SupportedOSPlatform("windows")]
     class VirtualPage
     {
+        List<IDisposable> _disposables = new();
         List<Action<Graphics>> _actions = new();
         public XLPaperSize PaperSize { get; }
         public VirtualPage(XLPaperSize size) => PaperSize = size;
-        public VirtualGraphics CreateGraphics() => new(_actions);
-        public void DrawTo(Graphics g) => _actions.ForEach(a => a(g));
+        public VirtualGraphics CreateGraphics() => new(_actions, _disposables);
+        public void DrawTo(Graphics g)
+        {
+            _actions.ForEach(a => a(g));
+            _disposables.ForEach(d => d.Dispose());
+        }
     }
 
     [SupportedOSPlatform("windows")]

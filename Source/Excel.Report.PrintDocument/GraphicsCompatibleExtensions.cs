@@ -10,12 +10,19 @@ namespace Excel.Report.PrintDocument
     [SupportedOSPlatform("windows")]
     static class GraphicsCompatibleExtensions
     {
-        internal static void DrawImage(this Graphics gfx, Image gdimg, double x, double y, double width, double height)
+        //TODO Don't hold it statically as it will leave behind debris.
+        static readonly ConditionalWeakTable<Graphics, Stack<GraphicsState>> _states = new();
+
+        internal static void TranslateTransform(this Graphics gfx, double dx, double dy)
         {
-            gfx.DrawImage(
-                gdimg,
-                new RectangleF((float)x, (float)y, (float)width, (float)height)
-            );
+            if (gfx is null) throw new ArgumentNullException(nameof(gfx));
+            if (!_states.TryGetValue(gfx, out var stack))
+            {
+                stack = new Stack<GraphicsState>();
+                _states.Add(gfx, stack);
+            }
+            stack.Push(gfx.Save());
+            gfx.TranslateTransform(dx, dy);
         }
 
         internal static void Restore(this Graphics gfx)
@@ -25,9 +32,13 @@ namespace Excel.Report.PrintDocument
             gfx.Restore(stack.Pop());
         }
 
+        internal static void DrawImage(this Graphics gfx, Image gdimg, double x, double y, double width, double height)
+            => gfx.DrawImage(gdimg, new RectangleF((float)x, (float)y, (float)width, (float)height));
+
         internal static void DrawString(this Graphics gfx, string text, XFont font, XBrush brush, XRect layoutRectangle, XStringFormat format)
         {
             if (gfx is null) throw new ArgumentNullException(nameof(gfx));
+            var rect = new RectangleF((float)layoutRectangle.X, (float)layoutRectangle.Y, (float)layoutRectangle.Width, (float)layoutRectangle.Height);
             using var gfont = font.ToGdiFont();
             using var gbrush = brush.ToGdiBrush();
             using var gfmt = new StringFormat
@@ -50,22 +61,9 @@ namespace Excel.Report.PrintDocument
             gfmt.FormatFlags |= StringFormatFlags.NoClip;
 
             //Adjuctment
-            var rect = gfx.ToRectGU(layoutRectangle);
             if (gfmt.LineAlignment != StringAlignment.Center) rect.Height += (gfont.Height / 4);
 
             gfx.DrawString(text ?? string.Empty, gfont, gbrush, rect, gfmt);
-        }
-
-        internal static void TranslateTransform(this Graphics gfx, double dx, double dy)
-        {
-            if (gfx is null) throw new ArgumentNullException(nameof(gfx));
-            if (!_states.TryGetValue(gfx, out var stack))
-            {
-                stack = new Stack<GraphicsState>();
-                _states.Add(gfx, stack);
-            }
-            stack.Push(gfx.Save());
-            gfx.TranslateTransform(dx, dy);
         }
 
         internal static void DrawRectangle(this Graphics gfx, XBrush brush, double x, double y, double width, double height)
@@ -81,16 +79,6 @@ namespace Excel.Report.PrintDocument
             using var gpen = gfx.ToGdiPen(pen);
             gfx.DrawLine(gpen, (float)x1, (float)y1, (float)x2, (float)y2);
         }
-
-        static readonly ConditionalWeakTable<Graphics, Stack<GraphicsState>> _states = new();
-
-        static RectangleF ToRectGU(this Graphics g, XRect r) =>
-            new RectangleF(
-                (float)r.X,
-                (float)r.Y,
-               (float)r.Width,
-                (float)r.Height
-            );
 
         static Pen ToGdiPen(this Graphics g, XPen pen)
         {
@@ -166,7 +154,7 @@ namespace Excel.Report.PrintDocument
             return new Font(family, (float)size, style, GraphicsUnit.Point);
         }
 
-        //TODO
+        //TODO The problem of illegal references to internal fields will be solved if we standardize them and stop converting to XImage.
         internal static Image? TryExtractGdiImage(this XImage xi)
         {
             var fld = xi.GetType().GetField("_stream", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
