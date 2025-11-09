@@ -67,8 +67,8 @@ namespace Excel.Report.PrintDocument
     {
         List<IDisposable> _disposables = new();
         List<Action<Graphics>> _actions = new();
-        public XLPaperSize PaperSize { get; }
-        public VirtualPage(XLPaperSize size) => PaperSize = size;
+        public IXLPageSetup PageSetup { get; }
+        public VirtualPage(IXLPageSetup ps) => PageSetup = ps;
         public IVirtualGraphics CreateGraphics() => new VirtualGraphics(_actions, _disposables);
         public void DrawTo(Graphics g)
         {
@@ -84,7 +84,7 @@ namespace Excel.Report.PrintDocument
         public int PageCount => _pages.Count;
         public IVirtualPage AddPage(IXLPageSetup ps)
         {
-            var page = new VirtualPage(ps.PaperSize);
+            var page = new VirtualPage(ps);
             _pages.Add(page);
             return page;
         }

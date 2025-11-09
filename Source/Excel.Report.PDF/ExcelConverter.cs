@@ -1,4 +1,5 @@
-﻿using PdfSharp.Pdf;
+﻿using Excel.Report.PrintDocument;
+using PdfSharp.Pdf;
 
 namespace Excel.Report.PDF
 {
@@ -10,14 +11,29 @@ namespace Excel.Report.PDF
             return ConvertToPdf(mem);
         }
 
+        static MemoryStream ToPdfMemory(PdfVirtualDocument doc)
+        {
+            using var pdf = new PdfDocument();
+
+            for (int i = 0; i < doc.PageCount; i++)
+            {
+                var p = doc.Pages[i];
+                var page = pdf.AddPage(p.PageSetup);
+                using var gfx = PdfSharp.Drawing.XGraphics.FromPdfPage(page);
+                doc.DrawTo(gfx, i);
+            }
+
+            return ToMeoryStream(pdf);
+        }
+
         public static MemoryStream ConvertToPdf(Stream stream)
         {
             using var openClosedXML = new OpenClosedXML(stream);
-            var converter = new PdfRenderer(openClosedXML);
-            using var pdf = new PdfDocument();
-            converter.RenderTo(pdf);
+            var converter = new CommonDocumentRender(openClosedXML);
+            var document = new PdfVirtualDocument();
+            converter.RenderTo(document);
             converter.PostProcessCommands.ExecuteAll();
-            return ToMeoryStream(pdf);
+            return ToPdfMemory(document);
         }
 
         public static MemoryStream ConvertToPdf(string filePath, int sheetPosition, PageBreakInfo? pageBreakInfo = null)
@@ -29,11 +45,12 @@ namespace Excel.Report.PDF
         public static MemoryStream ConvertToPdf(Stream stream, int sheetPosition, PageBreakInfo? pageBreakInfo = null)
         {
             using var openClosedXML = new OpenClosedXML(stream);
-            var converter = new PdfRenderer(openClosedXML);
+            var converter = new CommonDocumentRender(openClosedXML);
             using var pdf = new PdfDocument();
-            converter.RenderTo(pdf, sheetPosition, pageBreakInfo);
+            var document = new PdfVirtualDocument();
+            converter.RenderTo(document, sheetPosition, pageBreakInfo);
             converter.PostProcessCommands.ExecuteAll();
-            return ToMeoryStream(pdf);
+            return ToPdfMemory(document);
         }
 
         public static MemoryStream ConvertToPdf(string filePath, string sheetName, PageBreakInfo? pageBreakInfo = null)
@@ -45,11 +62,12 @@ namespace Excel.Report.PDF
         public static MemoryStream ConvertToPdf(Stream stream, string sheetName, PageBreakInfo? pageBreakInfo = null)
         {
             using var openClosedXML = new OpenClosedXML(stream);
-            var converter = new PdfRenderer(openClosedXML);
+            var converter = new CommonDocumentRender(openClosedXML);
             using var pdf = new PdfDocument();
-            converter.RenderTo(pdf, openClosedXML.GetSheetPosition(sheetName), pageBreakInfo);
+            var document = new PdfVirtualDocument();
+            converter.RenderTo(document, openClosedXML.GetSheetPosition(sheetName), pageBreakInfo);
             converter.PostProcessCommands.ExecuteAll();
-            return ToMeoryStream(pdf);
+            return ToPdfMemory(document);
         }
 
         static MemoryStream ToMeoryStream(PdfDocument pdf)

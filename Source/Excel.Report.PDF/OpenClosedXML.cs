@@ -77,75 +77,6 @@ namespace Excel.Report.PDF
             => GetCellInfo(ws.PageSetup, pdfWidthSrc, pdfHeightSrc,
                 GetPageRanges(ws, worksheetPart, pageBreakInfo), ws.MergedRanges.ToArray(), ws.Pictures.OfType<IXLPicture>().ToArray(), out scaling);
 
-        internal XPen ConvertToXPen(XLBorderStyleValues borderStyle, XLColor? color, double scale)
-        {
-            var xcolor = ChangeColorX(color) ?? XColor.FromArgb(255, 0, 0, 0);
-
-            double lineWidth = 1.0;
-            switch (borderStyle)
-            {
-                case XLBorderStyleValues.None:
-                    lineWidth = 0;
-                    break;
-                case XLBorderStyleValues.Thin:
-                    lineWidth = 0.5;
-                    break;
-                case XLBorderStyleValues.Medium:
-                case XLBorderStyleValues.MediumDashDot:
-                case XLBorderStyleValues.MediumDashDotDot:
-                case XLBorderStyleValues.MediumDashed:
-                    lineWidth = 1.5;
-                    break;
-                case XLBorderStyleValues.Thick:
-                    lineWidth = 2.5;
-                    break;
-            }
-
-            var pen = new XPen(xcolor, lineWidth * scale);
-            switch (borderStyle)
-            {
-                case XLBorderStyleValues.None:
-                    pen.DashStyle = XDashStyle.Solid;
-                    pen.Color = XColors.Transparent;
-                    break;
-                case XLBorderStyleValues.Thin:
-                case XLBorderStyleValues.Medium:
-                case XLBorderStyleValues.Thick:
-                    pen.DashStyle = XDashStyle.Solid;
-                    break;
-                case XLBorderStyleValues.Dotted:
-                    pen.DashStyle = XDashStyle.Dot;
-                    break;
-                case XLBorderStyleValues.Dashed:
-                    pen.DashStyle = XDashStyle.Dash;
-                    break;
-                case XLBorderStyleValues.Double:
-                    // PDFsharp doesn't have direct support for Double style, so we approximate it as Solid.
-                    pen.DashStyle = XDashStyle.Solid;
-                    break;
-                case XLBorderStyleValues.Hair:
-                    // PDFsharp doesn't have direct support for the Hair style, so we approximate it as a Dot.
-                    pen.DashStyle = XDashStyle.Dot;
-                    break;
-                case XLBorderStyleValues.MediumDashed:
-                    pen.DashStyle = XDashStyle.Dash;
-                    break;
-                case XLBorderStyleValues.DashDot:
-                    pen.DashStyle = XDashStyle.DashDot;
-                    break;
-                case XLBorderStyleValues.MediumDashDot:
-                case XLBorderStyleValues.SlantDashDot:
-                case XLBorderStyleValues.MediumDashDotDot:
-                    pen.DashStyle = XDashStyle.DashDotDot;
-                    break;
-                default:
-                    pen.DashStyle = XDashStyle.Solid;
-                    break;
-            }
-
-            return pen;
-        }
-
         internal VirtualPen ConvertToPen(XLBorderStyleValues borderStyle, XLColor? color, double scale)
         {
             var xcolor = ChangeColor(color) ?? new VirtualColor(255, 0, 0, 0);
@@ -170,8 +101,7 @@ namespace Excel.Report.PDF
                     break;
             }
 
-            var pen = new VirtualPen(xcolor, lineWidth * scale);
-            pen.BorderStyleValues = borderStyle;
+            var pen = new VirtualPen(xcolor, lineWidth * scale, borderStyle);
             return pen;
         }
 
@@ -191,47 +121,6 @@ namespace Excel.Report.PDF
                 ConvertToColor(colorScheme.Accent5Color!),
                 ConvertToColor(colorScheme.Accent6Color!)
             };
-        }
-
-        internal XColor? ChangeColorX(XLColor? src)
-        {
-            if (src == null || !src.HasValue) return null;
-
-            if (src.ColorType == XLColorType.Color)
-            {
-                if (src.Color.A == 0) return null;
-                var colorValue = src.Color;
-                return XColor.FromArgb(colorValue.A, colorValue.R, colorValue.G, colorValue.B);
-            }
-            else if (src.ColorType == XLColorType.Theme)
-            {
-                Color? netColor = null;
-                if (XLThemeColor.Accent1 <= src.ThemeColor && src.ThemeColor <= XLThemeColor.Accent6)
-                {
-                    var list = GetAccentColorsFromExcelTheme();
-                    netColor = list[src.ThemeColor - XLThemeColor.Accent1];
-
-                }
-                if (netColor == null)
-                {
-                    var resolvedColor1 = Workbook.Theme.ResolveThemeColor(src.ThemeColor);
-                    var resolvedColor = resolvedColor1.Color;
-                    netColor = Color.FromArgb(resolvedColor.A, resolvedColor.R, resolvedColor.G, resolvedColor.B);
-                }
-                var colorValue = ApplyTint(netColor.Value, src.ThemeTint);
-                return XColor.FromArgb(colorValue.A, colorValue.R, colorValue.G, colorValue.B);
-
-            }
-            else if (src.ColorType == XLColorType.Indexed)
-            {
-                if (XLColor.IndexedColors.TryGetValue(src.Indexed, out var color) && color.ColorType == XLColorType.Color)
-                {
-                    var colorValue = color.Color;
-                    if (colorValue.A == 0) return null;
-                    return XColor.FromArgb(colorValue.A, colorValue.R, colorValue.G, colorValue.B);
-                }
-            }
-            return null;
         }
 
         internal VirtualColor? ChangeColor(XLColor? src)

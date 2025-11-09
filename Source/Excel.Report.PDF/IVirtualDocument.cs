@@ -21,11 +21,12 @@ namespace Excel.Report.PDF
     {
         internal VirtualColor Color { get; set; }
         internal double Width { get; set; }
-        internal XLBorderStyleValues? BorderStyleValues { get; set; }
-        internal VirtualPen(VirtualColor color, double width)
+        internal XLBorderStyleValues BorderStyleValues { get; set; }
+        internal VirtualPen(VirtualColor color, double width, XLBorderStyleValues border)
         {
             Color = color;
             Width = width;
+            BorderStyleValues = border;
         }
     }
     enum VirtualAlignment
@@ -82,7 +83,7 @@ namespace Excel.Report.PDF
 
     interface IVirtualPage
     {
-        XLPaperSize PaperSize { get; }
+        IXLPageSetup PageSetup { get; }
         IVirtualGraphics CreateGraphics();
     }
 
