@@ -18,30 +18,30 @@ namespace Excel.Report.PrintDocument
         internal CommonDocumentRender(OpenClosedXML openClosedXML)
             => _openClosedXML = openClosedXML;
 
-        internal void RenderTo(IVirtualDocument pdf)
+        internal void RenderTo(IVirtualDocument document)
         {
             for (int i = 1; i <= _openClosedXML.SheetCount; i++)
             {
-                RenderTo(pdf, i, null);
+                RenderTo(document, i, null);
             }
         }
 
-        internal void RenderTo(IVirtualDocument pdf, int sheetPosition, PageBreakInfo? pageBreakInfo)
+        internal void RenderTo(IVirtualDocument document, int sheetPosition, PageBreakInfo? pageBreakInfo)
         {
             var ps = _openClosedXML.GetPageSetup(sheetPosition);
-            var page = pdf.AddPage(ps);
+            var page = document.AddPage(ps);
             var size = PaperSizeMap.GetPaperSize(ps.PaperSize);
             var allCells = _openClosedXML.GetCellInfo(sheetPosition, OpenClosedXML.PixelToPoint(size.w.Point), OpenClosedXML.PixelToPoint(size.h.Point), out var scaling, pageBreakInfo);
 
-            RenderTo(pdf, ps, page, allCells, scaling);
+            RenderTo(document, ps, page, allCells, scaling);
         }
 
-        void RenderTo(IVirtualDocument pdf, IXLPageSetup ps, IVirtualPage pageSrc, List<List<CellInfo>> allCells, double scaling)
+        void RenderTo(IVirtualDocument document, IXLPageSetup ps, IVirtualPage pageSrc, List<List<CellInfo>> allCells, double scaling)
         {
             IVirtualPage? page = pageSrc;
             for (int i = 0; i < allCells.Count; i++)
             {
-                if (page == null) page = pdf.AddPage(ps);
+                if (page == null) page = document.AddPage(ps);
                 var currentPage = page;
                 var gfx = page.CreateGraphics();
                 page = null;
@@ -58,7 +58,7 @@ namespace Excel.Report.PrintDocument
                 }
                 foreach (var cellInfo in allCells[i])
                 {
-                    DrawCellText(pdf, currentPage, gfx, scaling, cellInfo);
+                    DrawCellText(document, currentPage, gfx, scaling, cellInfo);
                 }
 
                 var pictureInfoAndCellInfo = new List<PictureInfoAndCellInfo>();
@@ -194,7 +194,7 @@ namespace Excel.Report.PrintDocument
                     // Do NOT draw a center line. That would be eaten by a neighbor single line.
                     var thin = _openClosedXML.ConvertToPen(XLBorderStyleValues.Thin, color, scaling);
 
-                    // Ensure a visible gap on screen/PDF rasterizers
+                    // Ensure a visible gap on rasterizers
                     double w = Math.Max(thin.Width, 0.7); // >=0.5pt guard for visibility
 
                     switch (side)
@@ -239,7 +239,7 @@ namespace Excel.Report.PrintDocument
                 cellInfo.X, cellInfo.Y + cellInfo.Height, cellInfo.X, cellInfo.Y, IsDrawLeft(cellInfo));
         }
 
-        void DrawCellText(IVirtualDocument pdf, IVirtualPage page, IVirtualGraphics currentXG, double scaling, CellInfo cellInfo)
+        void DrawCellText(IVirtualDocument document, IVirtualPage page, IVirtualGraphics currentXG, double scaling, CellInfo cellInfo)
         {
             var cell = cellInfo.Cell!;
 
@@ -313,15 +313,14 @@ namespace Excel.Report.PrintDocument
             }
 
             // Excel (0..90 = counterclockwise / 91..180 = clockwise (= negative angle))
-            // PDFsharp uses positive angles as clockwise, so map as follows
-            int anglePdf = 0;
-            if (raw <= 90) anglePdf = -raw;        // Up-left slant (Excel +) → negative angle in PDF
-            else anglePdf = 180 - raw;    // Up-right slant (Excel -) → positive angle in PDF
+            int angle = 0;
+            if (raw <= 90) angle = -raw;        // Up-left slant (Excel +) → negative angle in target
+            else angle = 180 - raw;    // Up-right slant (Excel -) → positive angle in target
 
-            if (anglePdf != 0)
+            if (angle != 0)
             {
-                if (TryResolvePageVariable(lines, l => DrawRotated(currentXG, font, xFontColor, rect, format, new[] { l }, anglePdf))) return;
-                DrawRotated(currentXG, font, xFontColor, rect, format, lines, anglePdf);
+                if (TryResolvePageVariable(lines, l => DrawRotated(currentXG, font, xFontColor, rect, format, new[] { l }, angle))) return;
+                DrawRotated(currentXG, font, xFontColor, rect, format, lines, angle);
                 return;
             }
 
@@ -350,7 +349,7 @@ namespace Excel.Report.PrintDocument
                 Action action = () => { };
                 if (line == "#Page")
                 {
-                    line = pdf.PageCount.ToString();
+                    line = document.PageCount.ToString();
                     draw(line);
                     return true;
                 }
@@ -358,7 +357,7 @@ namespace Excel.Report.PrintDocument
                 {
                     PostProcessCommands.Add(new PageProcessCommand(() =>
                     {
-                        var pageCount = pdf.PageCount.ToString();
+                        var pageCount = document.PageCount.ToString();
                         draw(pageCount);
                     }));
                     return true;
@@ -367,10 +366,10 @@ namespace Excel.Report.PrintDocument
                 {
                     var args = line.Replace("#PageOf", "").Replace("(", "").Replace(")", "").Split(',').Select(e => e.Trim()).ToArray();
                     var sp = args.FirstOrDefault()?.Replace("\"", "") ?? "/";
-                    var currentPage = pdf.PageCount.ToString();
+                    var currentPage = document.PageCount.ToString();
                     PostProcessCommands.Add(new PageProcessCommand(() =>
                     {
-                        var pageCount = pdf.PageCount.ToString();
+                        var pageCount = document.PageCount.ToString();
                         draw(currentPage + sp + pageCount);
                     }));
                     return true;
@@ -420,7 +419,7 @@ namespace Excel.Report.PrintDocument
 
                 g.Save();
 
-                // Rotate about the center (PDFsharp uses positive = clockwise)
+                // Rotate about the center
                 g.TranslateTransform(r.X + r.Width / 2.0, r.Y + r.Height / 2.0);
                 g.RotateTransform(angle);
 
