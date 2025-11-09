@@ -330,7 +330,7 @@ namespace Excel.Report.PDF
             if (format.LineAlignment == VirtualAlignment.Center)
                 startY += (rect.Height - lines.Length * fontHeight) / 2.0;
             else if (format.LineAlignment == VirtualAlignment.Far)
-                startY += rect.Height - lines.Length * fontHeight;
+                startY += (rect.Height - lines.Length * fontHeight);
 
             if (TryResolvePageVariable(lines, l => currentXG.DrawString(l, font, xFontColor, new VirtualRect(rect.X, startY, rect.Width, fontHeight), format))) return;
             foreach (var line in lines)

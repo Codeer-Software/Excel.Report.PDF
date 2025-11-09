@@ -51,7 +51,7 @@ namespace Excel.Report.PrintDocument
             gfmt.FormatFlags |= StringFormatFlags.NoClip;
 
             // Adjust height for vertical centering
-            if (gfmt.LineAlignment != StringAlignment.Center) rect.Height += (gfont.Height / 4);
+            if (gfmt.LineAlignment != StringAlignment.Center) rect.Height *= 1.3f;
 
             gfx.DrawString(text ?? string.Empty, gfont, gbrush, rect, gfmt);
         }
