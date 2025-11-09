@@ -77,9 +77,9 @@ namespace Excel.Report.PDF
             => GetCellInfo(ws.PageSetup, pdfWidthSrc, pdfHeightSrc,
                 GetPageRanges(ws, worksheetPart, pageBreakInfo), ws.MergedRanges.ToArray(), ws.Pictures.OfType<IXLPicture>().ToArray(), out scaling);
 
-        internal XPen ConvertToXPen(XLBorderStyleValues borderStyle, XLColor? color, double scale)
+        internal XPen ConvertToXPenX(XLBorderStyleValues borderStyle, XLColor? color, double scale)
         {
-            var xcolor = ChangeColor(color) ?? XColor.FromArgb(255, 0, 0, 0);
+            var xcolor = ChangeColorX(color) ?? XColor.FromArgb(255, 0, 0, 0);
 
             double lineWidth = 1.0;
             switch (borderStyle)
@@ -164,7 +164,7 @@ namespace Excel.Report.PDF
             };
         }
 
-        internal XColor? ChangeColor(XLColor? src)
+        internal XColor? ChangeColorX(XLColor? src)
         {
             if (src == null || !src.HasValue) return null;
 

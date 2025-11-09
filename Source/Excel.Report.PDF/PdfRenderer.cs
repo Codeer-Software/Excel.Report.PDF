@@ -97,7 +97,7 @@ namespace Excel.Report.PDF
             var cell = cellInfo.Cell!;
             if (cellInfo.MergedFirstCell != null) cell = cellInfo.MergedFirstCell.Cell!;
 
-            var xBackColor = _openClosedXML.ChangeColor(cell.Style.Fill.BackgroundColor);
+            var xBackColor = _openClosedXML.ChangeColorX(cell.Style.Fill.BackgroundColor);
             if (xBackColor != null)
             {
                 var brush = new XSolidBrush(xBackColor.Value);
@@ -209,7 +209,7 @@ namespace Excel.Report.PDF
                 {
                     // Excel-like "Double": two THIN strokes separated by a THIN-sized gap.
                     // Do NOT draw a center line. That would be eaten by a neighbor single line.
-                    var thin = _openClosedXML.ConvertToXPen(XLBorderStyleValues.Thin, color, scaling);
+                    var thin = _openClosedXML.ConvertToXPenX(XLBorderStyleValues.Thin, color, scaling);
 
                     // Ensure a visible gap on screen/PDF rasterizers
                     double w = Math.Max(thin.Width, 0.7); // >=0.5pt guard for visibility
@@ -231,7 +231,7 @@ namespace Excel.Report.PDF
                 }
 
                 // Other styles: use the normal pen
-                var pen = _openClosedXML.ConvertToXPen(style, color, scaling);
+                var pen = _openClosedXML.ConvertToXPenX(style, color, scaling);
                 gfx.DrawLine(pen, x1, y1, x2, y2);
             }
 
@@ -308,7 +308,7 @@ namespace Excel.Report.PDF
             var font = new XFont(cell.Style.Font.FontName, fontSize * scaling, fontStyle);
 
             var text = cell.GetFormattedString();
-            var xFontColor = _openClosedXML.ChangeColor(cell.Style.Font.FontColor) ?? XColor.FromArgb(255, 0, 0, 0);
+            var xFontColor = _openClosedXML.ChangeColorX(cell.Style.Font.FontColor) ?? XColor.FromArgb(255, 0, 0, 0);
             var brush = new XSolidBrush(xFontColor);
 
             double w = cellInfo.MergedWidth != 0 ? cellInfo.MergedWidth : cellInfo.Width;
