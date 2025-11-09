@@ -18,7 +18,7 @@ namespace Excel.Report.PrintDocument
         public static void Bind(System.Drawing.Printing.PrintDocument doc, Stream stream)
         {
             using var openClosedXML = new OpenClosedXML(stream);
-            var converter = new PrintDocumentRender(openClosedXML);
+            var converter = new CommonDocumentRender(openClosedXML);
             var document = new VirtualDocument();
             converter.RenderTo(document);
             converter.PostProcessCommands.ExecuteAll();

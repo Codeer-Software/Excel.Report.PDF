@@ -4,7 +4,7 @@ using PdfSharp.Drawing;
 
 namespace Excel.Report.PrintDocument
 {
-    class PrintDocumentRender
+    class CommonDocumentRender
     {
         class PageProcessCommand : IPostProcessCommand
         {
@@ -16,7 +16,7 @@ namespace Excel.Report.PrintDocument
         readonly OpenClosedXML _openClosedXML;
         internal List<IPostProcessCommand> PostProcessCommands { get; } = new();
 
-        internal PrintDocumentRender(OpenClosedXML openClosedXML)
+        internal CommonDocumentRender(OpenClosedXML openClosedXML)
             => _openClosedXML = openClosedXML;
 
         internal void RenderTo(IVirtualDocument pdf)
