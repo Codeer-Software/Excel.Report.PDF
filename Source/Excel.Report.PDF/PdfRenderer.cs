@@ -209,7 +209,7 @@ namespace Excel.Report.PDF
                 {
                     // Excel-like "Double": two THIN strokes separated by a THIN-sized gap.
                     // Do NOT draw a center line. That would be eaten by a neighbor single line.
-                    var thin = _openClosedXML.ConvertToXPenX(XLBorderStyleValues.Thin, color, scaling);
+                    var thin = _openClosedXML.ConvertToXPen(XLBorderStyleValues.Thin, color, scaling);
 
                     // Ensure a visible gap on screen/PDF rasterizers
                     double w = Math.Max(thin.Width, 0.7); // >=0.5pt guard for visibility
@@ -231,7 +231,7 @@ namespace Excel.Report.PDF
                 }
 
                 // Other styles: use the normal pen
-                var pen = _openClosedXML.ConvertToXPenX(style, color, scaling);
+                var pen = _openClosedXML.ConvertToXPen(style, color, scaling);
                 gfx.DrawLine(pen, x1, y1, x2, y2);
             }
 

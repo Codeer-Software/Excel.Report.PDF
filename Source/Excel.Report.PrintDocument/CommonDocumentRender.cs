@@ -1,6 +1,5 @@
 using ClosedXML.Excel;
 using Excel.Report.PDF;
-using PdfSharp.Drawing;
 
 namespace Excel.Report.PrintDocument
 {
@@ -82,11 +81,10 @@ namespace Excel.Report.PrintDocument
             var cell = cellInfo.Cell!;
             if (cellInfo.MergedFirstCell != null) cell = cellInfo.MergedFirstCell.Cell!;
 
-            var xBackColor = _openClosedXML.ChangeColorX(cell.Style.Fill.BackgroundColor);
+            var xBackColor = _openClosedXML.ChangeColor(cell.Style.Fill.BackgroundColor);
             if (xBackColor != null)
             {
-                var brush = new XSolidBrush(xBackColor.Value);
-                gfx.DrawRectangle(brush, cellInfo.X, cellInfo.Y, cellInfo.Width, cellInfo.Height);
+                gfx.DrawRectangle(xBackColor, cellInfo.X, cellInfo.Y, cellInfo.Width, cellInfo.Height);
             }
         }
 
@@ -97,7 +95,7 @@ namespace Excel.Report.PrintDocument
             Dictionary<string, bool> _cache = new Dictionary<string, bool>();
             public DrawLineCache(IVirtualGraphics gfx) => _gfx = gfx;
 
-            public void DrawLine(XPen xPen, double x1, double y1, double x2, double y2)
+            public void DrawLine(VirtualPen xPen, double x1, double y1, double x2, double y2)
             {
                 var key = $"({Math.Min(x1, x2)},{Math.Min(y1, y2)}),({Math.Max(x1, x2)},{Math.Max(y1, y2)})";
                 if (_cache.ContainsKey(key)) return;
@@ -194,7 +192,7 @@ namespace Excel.Report.PrintDocument
                 {
                     // Excel-like "Double": two THIN strokes separated by a THIN-sized gap.
                     // Do NOT draw a center line. That would be eaten by a neighbor single line.
-                    var thin = _openClosedXML.ConvertToXPenX(XLBorderStyleValues.Thin, color, scaling);
+                    var thin = _openClosedXML.ConvertToPen(XLBorderStyleValues.Thin, color, scaling);
 
                     // Ensure a visible gap on screen/PDF rasterizers
                     double w = Math.Max(thin.Width, 0.7); // >=0.5pt guard for visibility
@@ -216,7 +214,7 @@ namespace Excel.Report.PrintDocument
                 }
 
                 // Other styles: use the normal pen
-                var pen = _openClosedXML.ConvertToXPenX(style, color, scaling);
+                var pen = _openClosedXML.ConvertToPen(style, color, scaling);
                 gfx.DrawLine(pen, x1, y1, x2, y2);
             }
 
@@ -246,27 +244,27 @@ namespace Excel.Report.PrintDocument
             var cell = cellInfo.Cell!;
 
             // Alignment
-            var format = new XStringFormat();
+            var format = new VirtualStringFormat();
             switch (cell.Style.Alignment.Horizontal)
             {
                 case XLAlignmentHorizontalValues.Center:
-                    format.Alignment = XStringAlignment.Center;
+                    format.Alignment = VirtualAlignment.Center;
                     break;
                 case XLAlignmentHorizontalValues.Right:
-                    format.Alignment = XStringAlignment.Far;
+                    format.Alignment = VirtualAlignment.Far;
                     break;
                 default:
                     switch (cell.DataType)
                     {
                         case XLDataType.Number:
                         case XLDataType.DateTime:
-                            format.Alignment = XStringAlignment.Far;
+                            format.Alignment = VirtualAlignment.Far;
                             break;
                         case XLDataType.Boolean:
-                            format.Alignment = XStringAlignment.Center;
+                            format.Alignment = VirtualAlignment.Center;
                             break;
                         default:
-                            format.Alignment = XStringAlignment.Near;
+                            format.Alignment = VirtualAlignment.Near;
                             break;
                     }
                     break;
@@ -274,27 +272,21 @@ namespace Excel.Report.PrintDocument
             switch (cell.Style.Alignment.Vertical)
             {
                 case XLAlignmentVerticalValues.Center:
-                    format.LineAlignment = XLineAlignment.Center;
+                    format.LineAlignment = VirtualAlignment.Center;
                     break;
                 case XLAlignmentVerticalValues.Bottom:
-                    format.LineAlignment = XLineAlignment.Far;
+                    format.LineAlignment = VirtualAlignment.Far;
                     break;
                 default:
-                    format.LineAlignment = XLineAlignment.Near;
+                    format.LineAlignment = VirtualAlignment.Near;
                     break;
             }
 
             // Font
             double fontSize = cell.Style.Font.FontSize;
-            var fontStyle = XFontStyleEx.Regular;
-            if (cell.Style.Font.Bold) fontStyle |= XFontStyleEx.Bold;
-            if (cell.Style.Font.Italic) fontStyle |= XFontStyleEx.Italic;
-            if (cell.Style.Font.Underline != XLFontUnderlineValues.None) fontStyle |= XFontStyleEx.Underline;
-            var font = new XFont(cell.Style.Font.FontName, fontSize * scaling, fontStyle);
-
+            var font = new VirtualFont(cell.Style.Font, scaling);
             var text = cell.GetFormattedString();
-            var xFontColor = _openClosedXML.ChangeColorX(cell.Style.Font.FontColor) ?? XColor.FromArgb(255, 0, 0, 0);
-            var brush = new XSolidBrush(xFontColor);
+            var xFontColor = _openClosedXML.ChangeColor(cell.Style.Font.FontColor) ?? new VirtualColor(255, 0, 0, 0);
 
             double w = cellInfo.MergedWidth != 0 ? cellInfo.MergedWidth : cellInfo.Width;
             double h = cellInfo.MergedHeight != 0 ? cellInfo.MergedHeight : cellInfo.Height;
@@ -305,7 +297,7 @@ namespace Excel.Report.PrintDocument
             if (offset * 2 < w) w -= offset * 2;
             if (offset * 2 < h) h -= offset * 2;
 
-            var rect = new XRect(cellInfo.X + offset, cellInfo.Y + offset, w, h);
+            var rect = new VirtualRect(cellInfo.X + offset, cellInfo.Y + offset, w, h);
 
             var lines = text.Split(new[] { "\r\n", "\n" }, StringSplitOptions.None);
 
@@ -315,8 +307,8 @@ namespace Excel.Report.PrintDocument
             if (raw == 255)
             {
                 // Excel's "Vertical Text" (stack)
-                if (TryResolvePageVariable(lines, l => DrawVerticalStack(currentXG, font, brush, rect, format, new[] { l }))) return;
-                DrawVerticalStack(currentXG, font, brush, rect, format, lines);
+                if (TryResolvePageVariable(lines, l => DrawVerticalStack(currentXG, font, xFontColor, rect, format, new[] { l }))) return;
+                DrawVerticalStack(currentXG, font, xFontColor, rect, format, lines);
                 return;
             }
 
@@ -328,23 +320,25 @@ namespace Excel.Report.PrintDocument
 
             if (anglePdf != 0)
             {
-                if (TryResolvePageVariable(lines, l => DrawRotated(currentXG, font, brush, rect, format, new[] { l }, anglePdf))) return;
-                DrawRotated(currentXG, font, brush, rect, format, lines, anglePdf);
+                if (TryResolvePageVariable(lines, l => DrawRotated(currentXG, font, xFontColor, rect, format, new[] { l }, anglePdf))) return;
+                DrawRotated(currentXG, font, xFontColor, rect, format, lines, anglePdf);
                 return;
             }
 
+            var fontHeight = currentXG.GetFontHeight(font);
+
             // ===== Horizontal text (no rotation) =====
             double startY = rect.Y;
-            if (format.LineAlignment == XLineAlignment.Center)
-                startY += (rect.Height - lines.Length * font.Height) / 2.0;
-            else if (format.LineAlignment == XLineAlignment.Far)
-                startY += rect.Height - lines.Length * font.Height;
+            if (format.LineAlignment == VirtualAlignment.Center)
+                startY += (rect.Height - lines.Length * fontHeight) / 2.0;
+            else if (format.LineAlignment == VirtualAlignment.Far)
+                startY += rect.Height - lines.Length * fontHeight;
 
-            if (TryResolvePageVariable(lines, l => currentXG.DrawString(l, font, brush, new XRect(rect.X, startY, rect.Width, font.Height), format))) return;
+            if (TryResolvePageVariable(lines, l => currentXG.DrawString(l, font, xFontColor, new VirtualRect(rect.X, startY, rect.Width, fontHeight), format))) return;
             foreach (var line in lines)
             {
-                currentXG.DrawString(line, font, brush, new XRect(rect.X, startY, rect.Width, font.Height), format);
-                startY += font.Height;
+                currentXG.DrawString(line, font, xFontColor, new VirtualRect(rect.X, startY, rect.Width, fontHeight), format);
+                startY += fontHeight;
             }
 
             // ======== Local functions ========
@@ -385,18 +379,18 @@ namespace Excel.Report.PrintDocument
             }
 
             // Vertical writing (Excel stack): place characters top→bottom, advance columns left→right
-            static void DrawVerticalStack(IVirtualGraphics g, XFont f, XBrush b, XRect r, XStringFormat fmt, string[] cols)
+            static void DrawVerticalStack(IVirtualGraphics g, VirtualFont f, VirtualColor b, VirtualRect r, VirtualStringFormat fmt, string[] cols)
             {
-                double step = f.Height;                 // one cell
+                double step = g.GetFontHeight(f);                 // one cell
                 double totalW = cols.Length * step;
 
                 double startX = r.X;
-                if (fmt.Alignment == XStringAlignment.Center)
+                if (fmt.Alignment == VirtualAlignment.Center)
                     startX += Math.Max(0, (r.Width - totalW) / 2.0);
-                else if (fmt.Alignment == XStringAlignment.Far)
+                else if (fmt.Alignment == VirtualAlignment.Far)
                     startX += Math.Max(0, r.Width - totalW);
 
-                var charFmt = new XStringFormat { Alignment = XStringAlignment.Center, LineAlignment = XLineAlignment.Near };
+                var charFmt = new VirtualStringFormat { Alignment = VirtualAlignment.Center, LineAlignment = VirtualAlignment.Near };
 
                 for (int c = 0; c < cols.Length; c++)
                 {
@@ -404,9 +398,9 @@ namespace Excel.Report.PrintDocument
                     double colH = col.Length * step;
 
                     double y = r.Y;
-                    if (fmt.LineAlignment == XLineAlignment.Center)
+                    if (fmt.LineAlignment == VirtualAlignment.Center)
                         y += Math.Max(0, (r.Height - colH) / 2.0);
-                    else if (fmt.LineAlignment == XLineAlignment.Far)
+                    else if (fmt.LineAlignment == VirtualAlignment.Far)
                         y += Math.Max(0, r.Height - colH);
 
                     double x = startX + c * step;
@@ -414,32 +408,34 @@ namespace Excel.Report.PrintDocument
                     for (int i = 0; i < col.Length; i++)
                     {
                         string ch = col.Substring(i, 1);
-                        g.DrawString(ch, f, b, new XRect(x, y + i * step, step, step), charFmt);
+                        g.DrawString(ch, f, b, new VirtualRect(x, y + i * step, step, step), charFmt);
                     }
                 }
             }
 
             // Arbitrary-angle drawing: rotate the coordinate system around the rectangle center (do not swap width/height)
-            static void DrawRotated(IVirtualGraphics g, XFont f, XBrush b, XRect r, XStringFormat fmt, string[] content, int angle)
+            static void DrawRotated(IVirtualGraphics g, VirtualFont f, VirtualColor b, VirtualRect r, VirtualStringFormat fmt, string[] content, int angle)
             {
+                var fontHeight = g.GetFontHeight(f);
+
                 g.Save();
 
                 // Rotate about the center (PDFsharp uses positive = clockwise)
                 g.TranslateTransform(r.X + r.Width / 2.0, r.Y + r.Height / 2.0);
                 g.RotateTransform(angle);
 
-                var rr = new XRect(-r.Width / 2.0, -r.Height / 2.0, r.Width, r.Height);
+                var rr = new VirtualRect(-r.Width / 2.0, -r.Height / 2.0, r.Width, r.Height);
 
                 double y = rr.Y;
-                if (fmt.LineAlignment == XLineAlignment.Center)
-                    y += (rr.Height - content.Length * f.Height) / 2.0;
-                else if (fmt.LineAlignment == XLineAlignment.Far)
-                    y += rr.Height - content.Length * f.Height;
+                if (fmt.LineAlignment == VirtualAlignment.Center)
+                    y += (rr.Height - content.Length * fontHeight) / 2.0;
+                else if (fmt.LineAlignment == VirtualAlignment.Far)
+                    y += rr.Height - content.Length * fontHeight;
 
                 foreach (var line in content)
                 {
-                    g.DrawString(line, f, b, new XRect(rr.X, y, rr.Width, f.Height), fmt);
-                    y += f.Height;
+                    g.DrawString(line, f, b, new VirtualRect(rr.X, y, rr.Width, fontHeight), fmt);
+                    y += fontHeight;
                 }
 
                 g.Restore();

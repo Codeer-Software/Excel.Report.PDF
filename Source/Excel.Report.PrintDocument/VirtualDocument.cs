@@ -1,35 +1,11 @@
 ﻿using ClosedXML.Excel;
-using PdfSharp.Drawing;
+using Excel.Report.PDF;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Runtime.Versioning;
 
 namespace Excel.Report.PrintDocument
 {
-    interface IVirtualGraphics
-    {
-        void DrawImage(MemoryStream stream, double x, double y, double width, double height);
-        void Restore();
-        void DrawString(string text, XFont font, XBrush brush, XRect layoutRectangle, XStringFormat format);
-        void TranslateTransform(double dx, double dy);
-        void DrawRectangle(XBrush brush, double x, double y, double width, double height);
-        void DrawLine(XPen pen, double x1, double y1, double x2, double y2);
-        void Save();
-        void RotateTransform(int angle);
-    }
-
-    interface IVirtualPage
-    {
-        XLPaperSize PaperSize { get; }
-        IVirtualGraphics CreateGraphics();
-    }
-
-    interface IVirtualDocument
-    {
-        int PageCount { get; }
-        IVirtualPage AddPage(IXLPageSetup ps);
-    }
-
     [SupportedOSPlatform("windows")]
     class VirtualGraphics : IVirtualGraphics
     {
@@ -52,16 +28,16 @@ namespace Excel.Report.PrintDocument
         public void Restore()
             => _actions.Add(g => g.Restore(_states));
 
-        public void DrawString(string text, XFont font, XBrush brush, XRect layoutRectangle, XStringFormat format)
+        public void DrawString(string text, VirtualFont font, VirtualColor brush, VirtualRect layoutRectangle, VirtualStringFormat format)
             => _actions.Add(g => g.DrawString(text, font, brush, layoutRectangle, format));
 
         public void TranslateTransform(double dx, double dy)
             => _actions.Add(g => g.TranslateTransform(_states, dx, dy));
 
-        public void DrawRectangle(XBrush brush, double x, double y, double width, double height)
+        public void DrawRectangle(VirtualColor brush, double x, double y, double width, double height)
             => _actions.Add(g => g.DrawRectangle(brush, x, y, width, height));
 
-        public void DrawLine(XPen pen, double x1, double y1, double x2, double y2)
+        public void DrawLine(VirtualPen pen, double x1, double y1, double x2, double y2)
             => _actions.Add(g => g.DrawLine(pen, x1, y1, x2, y2));
 
         public void Save()
@@ -69,6 +45,9 @@ namespace Excel.Report.PrintDocument
 
         public void RotateTransform(int angle)
             => _actions.Add(g => g.RotateTransform(angle));
+
+        //TODO
+        public double GetFontHeight(VirtualFont font) => 0;
     }
 
     [SupportedOSPlatform("windows")]

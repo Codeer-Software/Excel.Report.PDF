@@ -77,7 +77,7 @@ namespace Excel.Report.PDF
             => GetCellInfo(ws.PageSetup, pdfWidthSrc, pdfHeightSrc,
                 GetPageRanges(ws, worksheetPart, pageBreakInfo), ws.MergedRanges.ToArray(), ws.Pictures.OfType<IXLPicture>().ToArray(), out scaling);
 
-        internal XPen ConvertToXPenX(XLBorderStyleValues borderStyle, XLColor? color, double scale)
+        internal XPen ConvertToXPen(XLBorderStyleValues borderStyle, XLColor? color, double scale)
         {
             var xcolor = ChangeColorX(color) ?? XColor.FromArgb(255, 0, 0, 0);
 
@@ -146,6 +146,35 @@ namespace Excel.Report.PDF
             return pen;
         }
 
+        internal VirtualPen ConvertToPen(XLBorderStyleValues borderStyle, XLColor? color, double scale)
+        {
+            var xcolor = ChangeColor(color) ?? new VirtualColor(255, 0, 0, 0);
+
+            double lineWidth = 1.0;
+            switch (borderStyle)
+            {
+                case XLBorderStyleValues.None:
+                    lineWidth = 0;
+                    break;
+                case XLBorderStyleValues.Thin:
+                    lineWidth = 0.5;
+                    break;
+                case XLBorderStyleValues.Medium:
+                case XLBorderStyleValues.MediumDashDot:
+                case XLBorderStyleValues.MediumDashDotDot:
+                case XLBorderStyleValues.MediumDashed:
+                    lineWidth = 1.5;
+                    break;
+                case XLBorderStyleValues.Thick:
+                    lineWidth = 2.5;
+                    break;
+            }
+
+            var pen = new VirtualPen(xcolor, lineWidth * scale);
+            pen.BorderStyleValues = borderStyle;
+            return pen;
+        }
+
         internal List<Color?> GetAccentColorsFromExcelTheme()
         {
             var workbookPart = _document.WorkbookPart;
@@ -200,6 +229,47 @@ namespace Excel.Report.PDF
                     var colorValue = color.Color;
                     if (colorValue.A == 0) return null;
                     return XColor.FromArgb(colorValue.A, colorValue.R, colorValue.G, colorValue.B);
+                }
+            }
+            return null;
+        }
+
+        internal VirtualColor? ChangeColor(XLColor? src)
+        {
+            if (src == null || !src.HasValue) return null;
+
+            if (src.ColorType == XLColorType.Color)
+            {
+                if (src.Color.A == 0) return null;
+                var colorValue = src.Color;
+                return new VirtualColor(colorValue.A, colorValue.R, colorValue.G, colorValue.B);
+            }
+            else if (src.ColorType == XLColorType.Theme)
+            {
+                Color? netColor = null;
+                if (XLThemeColor.Accent1 <= src.ThemeColor && src.ThemeColor <= XLThemeColor.Accent6)
+                {
+                    var list = GetAccentColorsFromExcelTheme();
+                    netColor = list[src.ThemeColor - XLThemeColor.Accent1];
+
+                }
+                if (netColor == null)
+                {
+                    var resolvedColor1 = Workbook.Theme.ResolveThemeColor(src.ThemeColor);
+                    var resolvedColor = resolvedColor1.Color;
+                    netColor = Color.FromArgb(resolvedColor.A, resolvedColor.R, resolvedColor.G, resolvedColor.B);
+                }
+                var colorValue = ApplyTint(netColor.Value, src.ThemeTint);
+                return new VirtualColor(colorValue.A, colorValue.R, colorValue.G, colorValue.B);
+
+            }
+            else if (src.ColorType == XLColorType.Indexed)
+            {
+                if (XLColor.IndexedColors.TryGetValue(src.Indexed, out var color) && color.ColorType == XLColorType.Color)
+                {
+                    var colorValue = color.Color;
+                    if (colorValue.A == 0) return null;
+                    return new VirtualColor(colorValue.A, colorValue.R, colorValue.G, colorValue.B);
                 }
             }
             return null;
