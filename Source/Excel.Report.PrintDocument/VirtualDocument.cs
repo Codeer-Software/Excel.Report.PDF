@@ -19,8 +19,9 @@ namespace Excel.Report.PrintDocument
             _disposables = disposables;
         }
 
-        internal void DrawImage(Image image, double x, double y, double width, double height)
-        { 
+        internal void DrawImage(MemoryStream stream, double x, double y, double width, double height)
+        {
+            var image = System.Drawing.Image.FromStream(stream);
             _disposables.Add(image);
             _actions.Add(g => g.DrawImage(image, x, y, width, height));
         }
