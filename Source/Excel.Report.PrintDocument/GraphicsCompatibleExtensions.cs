@@ -2,7 +2,6 @@
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Reflection;
-using System.Runtime.CompilerServices;
 using System.Runtime.Versioning;
 
 namespace Excel.Report.PrintDocument
@@ -10,26 +9,17 @@ namespace Excel.Report.PrintDocument
     [SupportedOSPlatform("windows")]
     static class GraphicsCompatibleExtensions
     {
-        //TODO Don't hold it statically as it will leave behind debris.
-        static readonly ConditionalWeakTable<Graphics, Stack<GraphicsState>> _states = new();
-
-        internal static void TranslateTransform(this Graphics gfx, double dx, double dy)
+        internal static void TranslateTransform(this Graphics gfx, Stack<GraphicsState> states, double dx, double dy)
         {
             if (gfx is null) throw new ArgumentNullException(nameof(gfx));
-            if (!_states.TryGetValue(gfx, out var stack))
-            {
-                stack = new Stack<GraphicsState>();
-                _states.Add(gfx, stack);
-            }
-            stack.Push(gfx.Save());
-            gfx.TranslateTransform(dx, dy);
+            states.Push(gfx.Save());
+            gfx.TranslateTransform((float)dx, (float)dy);
         }
 
-        internal static void Restore(this Graphics gfx)
+        internal static void Restore(this Graphics gfx, Stack<GraphicsState> states)
         {
             if (gfx is null) throw new ArgumentNullException(nameof(gfx));
-            if (!_states.TryGetValue(gfx, out var stack) || stack.Count == 0) return;
-            gfx.Restore(stack.Pop());
+            gfx.Restore(states.Pop());
         }
 
         internal static void DrawImage(this Graphics gfx, Image gdimg, double x, double y, double width, double height)

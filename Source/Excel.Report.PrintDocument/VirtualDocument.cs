@@ -1,6 +1,7 @@
 ﻿using ClosedXML.Excel;
 using PdfSharp.Drawing;
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.Runtime.Versioning;
 
 namespace Excel.Report.PrintDocument
@@ -10,6 +11,7 @@ namespace Excel.Report.PrintDocument
     {
         List<Action<Graphics>> _actions;
         List<IDisposable> _disposables;
+        Stack<GraphicsState> _states = new();
 
         internal VirtualGraphics(List<Action<Graphics>> actions, List<IDisposable> disposables)
         {
@@ -25,13 +27,13 @@ namespace Excel.Report.PrintDocument
             _actions.Add(g => g.DrawImage(img!, x, y, width, height));
         }
         internal void Restore()
-            => _actions.Add(g => g.ResetTransform());
+            => _actions.Add(g => g.Restore(_states));
 
         internal void DrawString(string text, XFont font, XBrush brush, XRect layoutRectangle, XStringFormat format)
             => _actions.Add(g => g.DrawString(text, font, brush, layoutRectangle, format));
 
         internal void TranslateTransform(double dx, double dy)
-            => _actions.Add(g => g.TranslateTransform(dx, dy));
+            => _actions.Add(g => g.TranslateTransform(_states, dx, dy));
 
         internal void DrawRectangle(XBrush brush, double x, double y, double width, double height)
             => _actions.Add(g => g.DrawRectangle(brush, x, y, width, height));
