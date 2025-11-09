@@ -1,5 +1,4 @@
 ﻿using ClosedXML.Excel;
-using DocumentFormat.OpenXml.Spreadsheet;
 using Excel.Report.PDF;
 using System.Drawing;
 using System.Drawing.Drawing2D;
@@ -77,7 +76,7 @@ namespace Excel.Report.PrintDocument
                 (int)Math.Round(Math.Clamp(v <= 1.0 ? v * 255.0 : v, 0.0, 255.0));
 
             var c = pen.Color;
-            var gc = System.Drawing.Color.FromArgb(ToByte(c.A), ToByte(c.R), ToByte(c.G), ToByte(c.B));
+            var gc = Color.FromArgb(ToByte(c.A), ToByte(c.R), ToByte(c.G), ToByte(c.B));
 
             var p = new Pen(gc, (float)pen.Width);
             switch (pen.BorderStyleValues)
@@ -118,7 +117,7 @@ namespace Excel.Report.PrintDocument
         static Brush ToGdiBrush(this VirtualColor c)
         {
             static int ToByte(double v) => (int)Math.Round(Math.Clamp(v <= 1.0 ? v * 255.0 : v, 0.0, 255.0));
-            var gc = System.Drawing.Color.FromArgb(ToByte(c.A), ToByte(c.R), ToByte(c.G), ToByte(c.B));
+            var gc = Color.FromArgb(ToByte(c.A), ToByte(c.R), ToByte(c.G), ToByte(c.B));
             return new SolidBrush(gc);
         }
 
@@ -128,14 +127,14 @@ namespace Excel.Report.PrintDocument
             return gfont.GetHeight(gfx);
         }
 
-        internal static System.Drawing.Font ToGdiFont(this VirtualFont font)
+        internal static Font ToGdiFont(this VirtualFont font)
         {
             var style = FontStyle.Regular;
             if (font.Core.Bold) style |= FontStyle.Bold;
             if (font.Core.Italic) style |= FontStyle.Italic;
             if (font.Core.Underline != XLFontUnderlineValues.None) style |= FontStyle.Underline;
             // Font size is pt
-            return new System.Drawing.Font(font.Core.FontName, (float)(font.Core.FontSize * font.Scaling), style, GraphicsUnit.Point);
+            return new Font(font.Core.FontName, (float)(font.Core.FontSize * font.Scaling), style, GraphicsUnit.Point);
         }
     }
 }

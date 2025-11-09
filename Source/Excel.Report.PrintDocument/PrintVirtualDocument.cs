@@ -7,13 +7,13 @@ using System.Runtime.Versioning;
 namespace Excel.Report.PrintDocument
 {
     [SupportedOSPlatform("windows")]
-    class VirtualGraphics : IVirtualGraphics
+    class PrintVirtualGraphics : IVirtualGraphics
     {
         List<Action<Graphics>> _actions;
         List<IDisposable> _disposables;
         Stack<GraphicsState> _states = new();
 
-        internal VirtualGraphics(List<Action<Graphics>> actions, List<IDisposable> disposables)
+        internal PrintVirtualGraphics(List<Action<Graphics>> actions, List<IDisposable> disposables)
         {
             _actions = actions;
             _disposables = disposables;
@@ -63,13 +63,13 @@ namespace Excel.Report.PrintDocument
     }
 
     [SupportedOSPlatform("windows")]
-    class VirtualPage : IVirtualPage
+    class PrintVirtualPage : IVirtualPage
     {
         List<IDisposable> _disposables = new();
         List<Action<Graphics>> _actions = new();
         public IXLPageSetup PageSetup { get; }
-        public VirtualPage(IXLPageSetup ps) => PageSetup = ps;
-        public IVirtualGraphics CreateGraphics() => new VirtualGraphics(_actions, _disposables);
+        public PrintVirtualPage(IXLPageSetup ps) => PageSetup = ps;
+        public IVirtualGraphics CreateGraphics() => new PrintVirtualGraphics(_actions, _disposables);
         public void DrawTo(Graphics g)
         {
             _actions.ForEach(a => a(g));
@@ -78,13 +78,13 @@ namespace Excel.Report.PrintDocument
     }
 
     [SupportedOSPlatform("windows")]
-    class VirtualDocument : IVirtualDocument
+    class PrintVirtualDocument : IVirtualDocument
     {
-        readonly List<VirtualPage> _pages = new();
+        readonly List<PrintVirtualPage> _pages = new();
         public int PageCount => _pages.Count;
         public IVirtualPage AddPage(IXLPageSetup ps)
         {
-            var page = new VirtualPage(ps);
+            var page = new PrintVirtualPage(ps);
             _pages.Add(page);
             return page;
         }

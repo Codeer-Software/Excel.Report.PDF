@@ -84,10 +84,7 @@ namespace Excel.Report.PrintDocument
         }
 
         static XColor ConvertToXColor(VirtualColor vColor)
-        {
-            return XColor.FromArgb(vColor.A, vColor.R, vColor.G, vColor.B);
-        }
-
+            => XColor.FromArgb(vColor.A, vColor.R, vColor.G, vColor.B);
 
         static XPen ConvertToXPen(VirtualPen vPen)
         {
@@ -132,10 +129,8 @@ namespace Excel.Report.PrintDocument
                     pen.DashStyle = XDashStyle.Solid;
                     break;
             }
-
             return pen;
         }
-
     }
 
     class PdfVirtualPage : IVirtualPage

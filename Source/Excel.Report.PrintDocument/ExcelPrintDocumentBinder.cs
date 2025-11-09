@@ -19,7 +19,7 @@ namespace Excel.Report.PrintDocument
         {
             using var openClosedXML = new OpenClosedXML(stream);
             var converter = new CommonDocumentRender(openClosedXML);
-            var document = new VirtualDocument();
+            var document = new PrintVirtualDocument();
             converter.RenderTo(document);
             converter.PostProcessCommands.ExecuteAll();
 

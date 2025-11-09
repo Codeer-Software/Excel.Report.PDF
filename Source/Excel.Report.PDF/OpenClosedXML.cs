@@ -2,7 +2,6 @@
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Drawing;
 using DocumentFormat.OpenXml;
-using PdfSharp.Drawing;
 using ClosedXML.Excel.Drawings;
 using DocumentFormat.OpenXml.Spreadsheet;
 using Color = System.Drawing.Color;
