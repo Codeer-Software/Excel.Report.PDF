@@ -1,4 +1,5 @@
 ﻿using ClosedXML.Excel;
+using DocumentFormat.OpenXml.Spreadsheet;
 using Excel.Report.PDF;
 using System.Drawing;
 using System.Drawing.Drawing2D;
@@ -50,7 +51,7 @@ namespace Excel.Report.PrintDocument
             };
             gfmt.FormatFlags |= StringFormatFlags.NoClip;
 
-            //Adjuctment
+            // Adjust height for vertical centering
             if (gfmt.LineAlignment != StringAlignment.Center) rect.Height += (gfont.Height / 4);
 
             gfx.DrawString(text ?? string.Empty, gfont, gbrush, rect, gfmt);
@@ -76,7 +77,7 @@ namespace Excel.Report.PrintDocument
                 (int)Math.Round(Math.Clamp(v <= 1.0 ? v * 255.0 : v, 0.0, 255.0));
 
             var c = pen.Color;
-            var gc = Color.FromArgb(ToByte(c.A), ToByte(c.R), ToByte(c.G), ToByte(c.B));
+            var gc = System.Drawing.Color.FromArgb(ToByte(c.A), ToByte(c.R), ToByte(c.G), ToByte(c.B));
 
             var p = new Pen(gc, (float)pen.Width);
             switch (pen.BorderStyleValues)
@@ -117,7 +118,7 @@ namespace Excel.Report.PrintDocument
         static Brush ToGdiBrush(this VirtualColor c)
         {
             static int ToByte(double v) => (int)Math.Round(Math.Clamp(v <= 1.0 ? v * 255.0 : v, 0.0, 255.0));
-            var gc = Color.FromArgb(ToByte(c.A), ToByte(c.R), ToByte(c.G), ToByte(c.B));
+            var gc = System.Drawing.Color.FromArgb(ToByte(c.A), ToByte(c.R), ToByte(c.G), ToByte(c.B));
             return new SolidBrush(gc);
         }
 
@@ -127,41 +128,14 @@ namespace Excel.Report.PrintDocument
             return gfont.GetHeight(gfx);
         }
 
-        static Font ToGdiFont(this VirtualFont font)
+        internal static System.Drawing.Font ToGdiFont(this VirtualFont font)
         {
             var style = FontStyle.Regular;
-
-            var t = font.GetType();
-            bool Has(string name) => t.GetProperty(name)?.GetValue(font) as bool? ?? false;
-
-            if (Has("Bold")) style |= FontStyle.Bold;
-            if (Has("Italic")) style |= FontStyle.Italic;
-            if (Has("Underline")) style |= FontStyle.Underline;
-            if (Has("Strikeout")) style |= FontStyle.Strikeout;
-
-            var family = GetFamilyName(font);
-
-            var sizeProp = t.GetProperty("Size");
-            var size = (double)(sizeProp?.GetValue(font) ?? 12.0);
-
+            if (font.Core.Bold) style |= FontStyle.Bold;
+            if (font.Core.Italic) style |= FontStyle.Italic;
+            if (font.Core.Underline != XLFontUnderlineValues.None) style |= FontStyle.Underline;
             // Font size is pt
-            return new Font(family, (float)size, style, GraphicsUnit.Point);
-        }
-
-        static string GetFamilyName(VirtualFont font)
-        {
-            var t = font.GetType();
-            var p = t.GetProperty("Name");
-            if (p?.GetValue(font) is string s && !string.IsNullOrEmpty(s)) return s;
-
-            var ff = t.GetProperty("FontFamily")?.GetValue(font);
-            var ffName = ff?.GetType().GetProperty("Name")?.GetValue(ff) as string;
-            if (!string.IsNullOrEmpty(ffName)) return ffName;
-
-            var fam = t.GetProperty("FamilyName")?.GetValue(font) as string;
-            if (!string.IsNullOrEmpty(fam)) return fam;
-
-            return "Segoe UI";
+            return new System.Drawing.Font(font.Core.FontName, (float)(font.Core.FontSize * font.Scaling), style, GraphicsUnit.Point);
         }
     }
 }

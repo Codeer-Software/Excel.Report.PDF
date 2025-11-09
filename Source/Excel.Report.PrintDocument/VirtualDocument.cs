@@ -46,8 +46,20 @@ namespace Excel.Report.PrintDocument
         public void RotateTransform(int angle)
             => _actions.Add(g => g.RotateTransform(angle));
 
-        //TODO
-        public double GetFontHeight(VirtualFont font) => 0;
+        public double GetFontHeight(VirtualFont vf)
+        {
+            var pt = GetLineHeightInPoints(vf.ToGdiFont());
+            return pt;
+        }
+
+        float GetLineHeightInPoints(Font f)
+        {
+            var fam = f.FontFamily;
+            var style = f.Style;
+            int em = fam.GetEmHeight(style);       // デザイン単位の em 高さ
+            int line = fam.GetLineSpacing(style);    // デザイン単位の行送り
+            return f.SizeInPoints * line / em;        // ポイント値（DPI不要）
+        }
     }
 
     [SupportedOSPlatform("windows")]
