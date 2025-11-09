@@ -1,7 +1,6 @@
 ﻿using PdfSharp.Drawing;
 using System.Drawing;
 using System.Drawing.Drawing2D;
-using System.Reflection;
 using System.Runtime.Versioning;
 
 namespace Excel.Report.PrintDocument
@@ -142,17 +141,6 @@ namespace Excel.Report.PrintDocument
 
             // Font size is pt
             return new Font(family, (float)size, style, GraphicsUnit.Point);
-        }
-
-        //TODO The problem of illegal references to internal fields will be solved if we standardize them and stop converting to XImage.
-        internal static Image? TryExtractGdiImage(this XImage xi)
-        {
-            var fld = xi.GetType().GetField("_stream", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
-            if (fld?.GetValue(xi) is not Stream s) return null;
-            var p = s.Position; s.Position = 0;
-            using var img = Image.FromStream(s, true, true);
-            s.Position = p;
-            return (Image)img.Clone();
         }
     }
 }

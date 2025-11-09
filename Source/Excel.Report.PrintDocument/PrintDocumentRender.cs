@@ -478,8 +478,9 @@ namespace Excel.Report.PrintDocument
         static void DrawPictures(VirtualGraphics gfx, PictureInfoAndCellInfo item)
         {
             item.PictureInfo.Picture!.Position = 0;
-            var xImage = XImage.FromStream(item.PictureInfo.Picture!);
-            gfx.DrawImage(xImage,
+            //It is executed with a delay, so don't discard it here.
+            var image = System.Drawing.Image.FromStream(item.PictureInfo.Picture!);
+            gfx.DrawImage(image,
             item.CellInfo.X + item.PictureInfo.X,
                 item.CellInfo.Y + item.PictureInfo.Y,
                 item.PictureInfo.Width,

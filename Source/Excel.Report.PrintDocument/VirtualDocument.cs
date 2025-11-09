@@ -19,12 +19,10 @@ namespace Excel.Report.PrintDocument
             _disposables = disposables;
         }
 
-        internal void DrawImage(XImage image, double x, double y, double width, double height)
+        internal void DrawImage(Image image, double x, double y, double width, double height)
         { 
-            //If you don't take it first, it will be discarded.
-            var img = image.TryExtractGdiImage();
-            _disposables.Add(img!);
-            _actions.Add(g => g.DrawImage(img!, x, y, width, height));
+            _disposables.Add(image);
+            _actions.Add(g => g.DrawImage(image, x, y, width, height));
         }
         internal void Restore()
             => _actions.Add(g => g.Restore(_states));
