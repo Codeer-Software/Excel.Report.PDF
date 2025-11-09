@@ -1,7 +1,6 @@
 using ClosedXML.Excel;
-using Excel.Report.PDF;
 
-namespace Excel.Report.PrintDocument
+namespace Excel.Report.PDF
 {
     class CommonDocumentRender
     {
