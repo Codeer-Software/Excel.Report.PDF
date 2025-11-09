@@ -11,21 +11,6 @@ namespace Excel.Report.PDF
             return ConvertToPdf(mem);
         }
 
-        static MemoryStream ToPdfMemory(PdfVirtualDocument doc)
-        {
-            using var pdf = new PdfDocument();
-
-            for (int i = 0; i < doc.PageCount; i++)
-            {
-                var p = doc.Pages[i];
-                var page = pdf.AddPage(p.PageSetup);
-                using var gfx = PdfSharp.Drawing.XGraphics.FromPdfPage(page);
-                doc.DrawTo(gfx, i);
-            }
-
-            return ToMeoryStream(pdf);
-        }
-
         public static MemoryStream ConvertToPdf(Stream stream)
         {
             using var openClosedXML = new OpenClosedXML(stream);
@@ -46,7 +31,6 @@ namespace Excel.Report.PDF
         {
             using var openClosedXML = new OpenClosedXML(stream);
             var converter = new CommonDocumentRender(openClosedXML);
-            using var pdf = new PdfDocument();
             var document = new PdfVirtualDocument();
             converter.RenderTo(document, sheetPosition, pageBreakInfo);
             converter.PostProcessCommands.ExecuteAll();
@@ -63,15 +47,24 @@ namespace Excel.Report.PDF
         {
             using var openClosedXML = new OpenClosedXML(stream);
             var converter = new CommonDocumentRender(openClosedXML);
-            using var pdf = new PdfDocument();
             var document = new PdfVirtualDocument();
             converter.RenderTo(document, openClosedXML.GetSheetPosition(sheetName), pageBreakInfo);
             converter.PostProcessCommands.ExecuteAll();
             return ToPdfMemory(document);
         }
 
-        static MemoryStream ToMeoryStream(PdfDocument pdf)
+        static MemoryStream ToPdfMemory(PdfVirtualDocument doc)
         {
+            using var pdf = new PdfDocument();
+
+            for (int i = 0; i < doc.PageCount; i++)
+            {
+                var p = doc.Pages[i];
+                var page = pdf.AddPage(p.PageSetup);
+                using var gfx = PdfSharp.Drawing.XGraphics.FromPdfPage(page);
+                doc.DrawTo(gfx, i);
+            }
+
             var outStream = new MemoryStream();
             pdf.Save(outStream);
             return outStream;
