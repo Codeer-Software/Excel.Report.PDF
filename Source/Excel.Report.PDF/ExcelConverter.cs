@@ -54,12 +54,11 @@ namespace Excel.Report.PDF
         {
             using var pdf = new PdfDocument();
 
-            for (int i = 0; i < doc.PageCount; i++)
+            foreach(var virtualPage in doc.Pages)
             {
-                var p = doc.Pages[i];
-                var page = pdf.AddPage(p.PageSetup);
+                var page = pdf.AddPage(virtualPage.PageSetup);
                 using var gfx = PdfSharp.Drawing.XGraphics.FromPdfPage(page);
-                doc.DrawTo(gfx, i);
+                virtualPage.DrawTo(gfx);
             }
 
             var outStream = new MemoryStream();

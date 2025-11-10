@@ -156,7 +156,5 @@ namespace Excel.Report.PrintDocument
             Pages.Add(page);
             return page;
         }
-
-        public void DrawTo(XGraphics g, int page)=> Pages[page].DrawTo(g);
     }
 }
