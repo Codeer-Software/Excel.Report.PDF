@@ -2,7 +2,7 @@ using ClosedXML.Excel;
 
 namespace Excel.Report.PDF
 {
-    class CommonDocumentRender
+    class VirtualRender
     {
         class PageProcessCommand : IPostProcessCommand
         {
@@ -14,7 +14,7 @@ namespace Excel.Report.PDF
         readonly OpenClosedXML _openClosedXML;
         internal List<IPostProcessCommand> PostProcessCommands { get; } = new();
 
-        internal CommonDocumentRender(OpenClosedXML openClosedXML)
+        internal VirtualRender(OpenClosedXML openClosedXML)
             => _openClosedXML = openClosedXML;
 
         internal void RenderTo(IVirtualDocument document)

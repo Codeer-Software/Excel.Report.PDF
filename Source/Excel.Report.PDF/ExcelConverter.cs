@@ -14,7 +14,7 @@ namespace Excel.Report.PDF
         public static MemoryStream ConvertToPdf(Stream stream)
         {
             using var openClosedXML = new OpenClosedXML(stream);
-            var converter = new CommonDocumentRender(openClosedXML);
+            var converter = new VirtualRender(openClosedXML);
             var document = new PdfVirtualDocument();
             converter.RenderTo(document);
             converter.PostProcessCommands.ExecuteAll();
@@ -30,7 +30,7 @@ namespace Excel.Report.PDF
         public static MemoryStream ConvertToPdf(Stream stream, int sheetPosition, PageBreakInfo? pageBreakInfo = null)
         {
             using var openClosedXML = new OpenClosedXML(stream);
-            var converter = new CommonDocumentRender(openClosedXML);
+            var converter = new VirtualRender(openClosedXML);
             var document = new PdfVirtualDocument();
             converter.RenderTo(document, sheetPosition, pageBreakInfo);
             converter.PostProcessCommands.ExecuteAll();
@@ -46,7 +46,7 @@ namespace Excel.Report.PDF
         public static MemoryStream ConvertToPdf(Stream stream, string sheetName, PageBreakInfo? pageBreakInfo = null)
         {
             using var openClosedXML = new OpenClosedXML(stream);
-            var converter = new CommonDocumentRender(openClosedXML);
+            var converter = new VirtualRender(openClosedXML);
             var document = new PdfVirtualDocument();
             converter.RenderTo(document, openClosedXML.GetSheetPosition(sheetName), pageBreakInfo);
             converter.PostProcessCommands.ExecuteAll();
