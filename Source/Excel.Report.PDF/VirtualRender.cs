@@ -35,7 +35,7 @@ namespace Excel.Report.PDF
         void RenderCore(IVirtualDocument document, int sheetPosition, PageBreakInfo? pageBreakInfo)
         {
             var ps = _openClosedXML.GetPageSetup(sheetPosition);
-            var size = PaperSizeMap.GetPaperSize(ps.PaperSize);
+            var size = PaperSizeMap.GetPaperSize(ps.PaperSize);//TODO think size and fit. order by execl key word.
             var allCells = _openClosedXML.GetCellInfo(sheetPosition, size.w.Point, size.h.Point, out var scaling, pageBreakInfo);
             RenderTo(document, ps, allCells, scaling);
         }
