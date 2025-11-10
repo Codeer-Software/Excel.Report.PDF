@@ -35,39 +35,35 @@ namespace Excel.Report.PDF
         void RenderCore(IVirtualDocument document, int sheetPosition, PageBreakInfo? pageBreakInfo)
         {
             var ps = _openClosedXML.GetPageSetup(sheetPosition);
-            var page = document.AddPage(ps);
             var size = PaperSizeMap.GetPaperSize(ps.PaperSize);
-            var allCells = _openClosedXML.GetCellInfo(sheetPosition, OpenClosedXML.PixelToPoint(size.w.Point), OpenClosedXML.PixelToPoint(size.h.Point), out var scaling, pageBreakInfo);
-            RenderTo(document, ps, page, allCells, scaling);
+            var allCells = _openClosedXML.GetCellInfo(sheetPosition, size.w.Point, size.h.Point, out var scaling, pageBreakInfo);
+            RenderTo(document, ps, allCells, scaling);
         }
 
-        void RenderTo(IVirtualDocument document, IXLPageSetup ps, IVirtualPage pageSrc, List<List<CellInfo>> allCells, double scaling)
+        void RenderTo(IVirtualDocument document, IXLPageSetup ps, List<List<CellInfo>> bookCells, double scaling)
         {
-            IVirtualPage? page = pageSrc;
-            for (int i = 0; i < allCells.Count; i++)
+            foreach(var sheetCells in bookCells)
             {
-                if (page == null) page = document.AddPage(ps);
-                var currentPage = page;
+                var page = document.AddPage(ps);
                 var gfx = page.CreateGraphics();
-                page = null;
                 var drawLineCache = new DrawLineCache(gfx);
 
                 // Since there are duplicate parts, the loops are separated to prevent overwriting.
-                foreach (var cellInfo in allCells[i])
+                foreach (var cellInfo in sheetCells)
                 {
                     FillCellBackColor(gfx, cellInfo);
                 }
-                foreach (var cellInfo in allCells[i])
+                foreach (var cellInfo in sheetCells)
                 {
                     DrawRuledLine(drawLineCache, scaling, cellInfo);
                 }
-                foreach (var cellInfo in allCells[i])
+                foreach (var cellInfo in sheetCells)
                 {
-                    DrawCellText(document, currentPage, gfx, scaling, cellInfo);
+                    DrawCellText(document, gfx, scaling, cellInfo);
                 }
 
                 var pictureInfoAndCellInfo = new List<PictureInfoAndCellInfo>();
-                foreach (var cellInfo in allCells[i])
+                foreach (var cellInfo in sheetCells)
                 {
                     foreach (var e in cellInfo.Pictures)
                     {
@@ -244,7 +240,7 @@ namespace Excel.Report.PDF
                 cellInfo.X, cellInfo.Y + cellInfo.Height, cellInfo.X, cellInfo.Y, IsDrawLeft(cellInfo));
         }
 
-        void DrawCellText(IVirtualDocument document, IVirtualPage page, IVirtualGraphics currentXG, double scaling, CellInfo cellInfo)
+        void DrawCellText(IVirtualDocument document, IVirtualGraphics currentXG, double scaling, CellInfo cellInfo)
         {
             var cell = cellInfo.Cell!;
 
