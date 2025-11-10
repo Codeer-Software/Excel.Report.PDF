@@ -21,7 +21,6 @@ namespace Excel.Report.PrintDocument
             var converter = new VirtualRender(openClosedXML);
             var document = new PrintVirtualDocument();
             converter.RenderTo(document);
-            converter.PostProcessCommands.ExecuteAll();
 
             //TODO Orientation and margin settings
             int pageIndex = 0;

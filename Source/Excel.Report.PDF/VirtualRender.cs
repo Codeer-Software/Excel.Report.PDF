@@ -12,7 +12,7 @@ namespace Excel.Report.PDF
         }
 
         readonly OpenClosedXML _openClosedXML;
-        internal List<IPostProcessCommand> PostProcessCommands { get; } = new();
+        readonly List<IPostProcessCommand> _postProcessCommands = new();
 
         internal VirtualRender(OpenClosedXML openClosedXML)
             => _openClosedXML = openClosedXML;
@@ -21,17 +21,23 @@ namespace Excel.Report.PDF
         {
             for (int i = 1; i <= _openClosedXML.SheetCount; i++)
             {
-                RenderTo(document, i, null);
+                RenderCore(document, i, null);
             }
+            _postProcessCommands.ExecuteAll();
         }
 
         internal void RenderTo(IVirtualDocument document, int sheetPosition, PageBreakInfo? pageBreakInfo)
+        {
+            RenderCore(document, sheetPosition, pageBreakInfo);
+            _postProcessCommands.ExecuteAll();
+        }
+
+        void RenderCore(IVirtualDocument document, int sheetPosition, PageBreakInfo? pageBreakInfo)
         {
             var ps = _openClosedXML.GetPageSetup(sheetPosition);
             var page = document.AddPage(ps);
             var size = PaperSizeMap.GetPaperSize(ps.PaperSize);
             var allCells = _openClosedXML.GetCellInfo(sheetPosition, OpenClosedXML.PixelToPoint(size.w.Point), OpenClosedXML.PixelToPoint(size.h.Point), out var scaling, pageBreakInfo);
-
             RenderTo(document, ps, page, allCells, scaling);
         }
 
@@ -354,7 +360,7 @@ namespace Excel.Report.PDF
                 }
                 else if (line == "#PageCount")
                 {
-                    PostProcessCommands.Add(new PageProcessCommand(() =>
+                    _postProcessCommands.Add(new PageProcessCommand(() =>
                     {
                         var pageCount = document.PageCount.ToString();
                         draw(pageCount);
@@ -366,7 +372,7 @@ namespace Excel.Report.PDF
                     var args = line.Replace("#PageOf", "").Replace("(", "").Replace(")", "").Split(',').Select(e => e.Trim()).ToArray();
                     var sp = args.FirstOrDefault()?.Replace("\"", "") ?? "/";
                     var currentPage = document.PageCount.ToString();
-                    PostProcessCommands.Add(new PageProcessCommand(() =>
+                    _postProcessCommands.Add(new PageProcessCommand(() =>
                     {
                         var pageCount = document.PageCount.ToString();
                         draw(currentPage + sp + pageCount);

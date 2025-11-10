@@ -17,7 +17,6 @@ namespace Excel.Report.PDF
             var converter = new VirtualRender(openClosedXML);
             var document = new PdfVirtualDocument();
             converter.RenderTo(document);
-            converter.PostProcessCommands.ExecuteAll();
             return ToPdfMemory(document);
         }
 
@@ -33,7 +32,6 @@ namespace Excel.Report.PDF
             var converter = new VirtualRender(openClosedXML);
             var document = new PdfVirtualDocument();
             converter.RenderTo(document, sheetPosition, pageBreakInfo);
-            converter.PostProcessCommands.ExecuteAll();
             return ToPdfMemory(document);
         }
 
@@ -49,7 +47,6 @@ namespace Excel.Report.PDF
             var converter = new VirtualRender(openClosedXML);
             var document = new PdfVirtualDocument();
             converter.RenderTo(document, openClosedXML.GetSheetPosition(sheetName), pageBreakInfo);
-            converter.PostProcessCommands.ExecuteAll();
             return ToPdfMemory(document);
         }
 
