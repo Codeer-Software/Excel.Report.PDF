@@ -148,3 +148,17 @@ It can display number of pages. It can be specified in any column except column 
 
 <br>
 <img src="Image/NumberOfPages.png">
+
+## Special Rendering Directives
+
+### 1. `#Empty`
+By default, only cells that contain values are rendered into the PDF.  
+If you put `#Empty` in a cell, the text itself will not be drawn, but **the cell’s area will still be included in the rendering range**.
+
+Use this when you want the cell’s presence to affect the layout, but you don’t want any visible text.
+
+### 2. `#FitColumn`
+This can only be specified in the `A1` cell.  
+If you write `#FitColumn` in `A1`, the content will be automatically scaled so that it fits the PDF drawing area **based on the Excel column width**, excluding the left and right margins.
+
+Use this when you want the PDF display size to be adjusted according to the column width in Excel.
