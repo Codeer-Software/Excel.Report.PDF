@@ -78,24 +78,10 @@ namespace Test
             File.WriteAllBytes(Path.Combine(TestEnvironment.TestResultsPath, "TestMultiSheet.pdf"), outStream.ToArray());
         }
 
-        [Test]
-        public void PageBreakRowColTest()
-        {
-            var pageBreakInfo = PageBreakInfo.CreateRowColumnPageBreak(15, 5);
-            Convert("PageBreakTest", pageBreakInfo);
-        }
-
-        [Test]
-        public void PageBreakHighWidthTest()
-        {
-            var pageBreakInfo = PageBreakInfo.CreateSizePageBreak(200, 35);
-            Convert("PageBreakHighWidthTest", pageBreakInfo);
-        }
-
-        public void Convert(string name, PageBreakInfo? pageBreakInfo = null)
+        public void Convert(string name)
         {
             var workbookPath = Path.Combine(TestEnvironment.PdfSrcPath, $"{name}.xlsx");
-            using var outStream = ExcelConverter.ConvertToPdf(workbookPath, 1, pageBreakInfo);
+            using var outStream = ExcelConverter.ConvertToPdf(workbookPath, 1);
             File.WriteAllBytes(Path.Combine(TestEnvironment.TestResultsPath, $"{name}.pdf"), outStream.ToArray());
         }
     }

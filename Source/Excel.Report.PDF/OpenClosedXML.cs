@@ -8,26 +8,17 @@ using Color = System.Drawing.Color;
 
 namespace Excel.Report.PDF
 {
-    public class PageBreakInfo
-    {
-        internal int RowCount { get; private set; } = 0;
-        internal int ColumnCount { get; private set; } = 0;
-        internal double PageHeight { get; private set; } = 0;
-        internal double PageWidth { get; private set; } = 0;
-        private PageBreakInfo() { }
-        public static PageBreakInfo CreateRowColumnPageBreak(int rowCount, int columnCount)
-        { 
-            if(rowCount == 0 || columnCount == 0)
-                throw new InvalidDataException("Invalid page break information");
-            return new PageBreakInfo { RowCount = rowCount, ColumnCount = columnCount }; 
-        }
-        public static PageBreakInfo CreateSizePageBreak(double pageHeight, double pageWidth)
-        {
-            if (pageHeight == 0 || pageWidth == 0)
-                throw new InvalidDataException("Invalid page break information");
-            return new PageBreakInfo { PageHeight = pageHeight, PageWidth = pageWidth }; 
-        }
-    }
+    //廃棄
+
+    //やりたいことは
+    //右端の列を決める⇒これいるか？⇒まあいるかじゃないとエクセルの改ページにひっかかるしな⇒いやそれもむしやわ
+    //＋Fitさせる、#FitCol|#FitRowCol|#LastCol("AX")
+    //とはいえ、これ使ったら改ページは明らかにずれるよな？⇒そんなもんってしとくか⇒なんなら後で足せばいいしな
+
+
+    //★これはエクセルで指定させる必要あるのか？
+    //マージンと紙のサイズは上から渡すこともできる
+        //⇒これはPrintDocumentだけでええけど、渡せる仕組みは必要
 
     class OpenClosedXML : IDisposable
     {
@@ -69,12 +60,12 @@ namespace Excel.Report.PDF
             return workSheetPart;
         }
 
-        internal List<List<CellInfo>> GetCellInfo(int sheetPosition, double pdfWidthSrc, double pdfHeightSrc, out double scaling, PageBreakInfo? pageBreakInfo = null)
-            => GetCellInfo(Workbook.Worksheet(sheetPosition), GetWorkSheetPartByPosition(sheetPosition), pdfWidthSrc, pdfHeightSrc, out scaling, pageBreakInfo);
+        internal List<List<CellInfo>> GetCellInfo(int sheetPosition, double pdfWidthSrc, double pdfHeightSrc, out double scaling)
+            => GetCellInfo(Workbook.Worksheet(sheetPosition), GetWorkSheetPartByPosition(sheetPosition), pdfWidthSrc, pdfHeightSrc, out scaling);
         
-        List<List<CellInfo>> GetCellInfo(IXLWorksheet ws, WorksheetPart worksheetPart, double pdfWidthSrc, double pdfHeightSrc, out double scaling, PageBreakInfo? pageBreakInfo = null)
+        List<List<CellInfo>> GetCellInfo(IXLWorksheet ws, WorksheetPart worksheetPart, double pdfWidthSrc, double pdfHeightSrc, out double scaling)
             => GetCellInfo(ws.PageSetup, pdfWidthSrc, pdfHeightSrc,
-                GetPageRanges(ws, worksheetPart, pageBreakInfo), ws.MergedRanges.ToArray(), ws.Pictures.OfType<IXLPicture>().ToArray(), out scaling);
+                GetPageRanges(ws, worksheetPart), ws.MergedRanges.ToArray(), ws.Pictures.OfType<IXLPicture>().ToArray(), out scaling);
 
         internal VirtualPen ConvertToPen(XLBorderStyleValues borderStyle, XLColor? color, double scale)
         {
@@ -232,141 +223,18 @@ namespace Excel.Report.PDF
             internal double Width { get; set; }
         }
 
-        internal void GetPageRanges(IXLWorksheet ws, int sheetPos, PageBreakInfo? pageBreakInfo = null)
-            =>GetPageRanges(ws, GetWorkSheetPartByPosition(sheetPos), pageBreakInfo);
+        internal void GetPageRanges(IXLWorksheet ws, int sheetPos)
+            =>GetPageRanges(ws, GetWorkSheetPartByPosition(sheetPos));
 
-        IXLRange[] GetPageRanges(IXLWorksheet ws, WorksheetPart worksheetPart, PageBreakInfo? pageBreakInfo = null)
+        IXLRange[] GetPageRanges(IXLWorksheet ws, WorksheetPart worksheetPart)
         {
             GetSheetMaxRowCol(ws, worksheetPart, out var maxRow, out var maxColumn);
             if (maxRow == 0 || maxColumn == 0) return new IXLRange[0];
 
-            if (pageBreakInfo == null)
-            {
-                return GetPageRangesByExcelOrder(ws, maxRow, maxColumn);
-            }
-            else 
-            {
-                if (pageBreakInfo.RowCount > 0)
-                {
-                    return GetPageRangesByRowColCount(ws, pageBreakInfo.RowCount, pageBreakInfo.ColumnCount, maxRow, maxColumn);
-                }
-                else
-                {
-                    return GetPageRangesBySize(ws, pageBreakInfo.PageHeight, pageBreakInfo.PageWidth, maxRow, maxColumn);
-                }
-            }           
+            return GetPageRangesByExcelOrder(ws, maxRow, maxColumn);
         }
-
-        private IXLRange[] GetPageRangesByRowColCount(IXLWorksheet ws, int pageBreakRowCount, int pageBreakColCount, int maxRow, int maxColumn)
-        {
-            // Setting page breaks (Rows)
-            var rowRanges = new List<StartEnd>();
-
-            for (var i = 1; i <= maxRow; i += pageBreakRowCount)
-            {
-                rowRanges.Add(new StartEnd { Start = i, End = Math.Min(i + pageBreakRowCount - 1, maxRow) });
-            }
-
-            // Setting page breaks (columns)
-            var colRanges = new List<StartEnd>();
-
-            for (var i = 1; i <= maxColumn; i += pageBreakColCount)
-            {
-                colRanges.Add(new StartEnd { Start = i, End = Math.Min(i + pageBreakColCount - 1, maxColumn) });
-            }
-
-            var list = new List<IXLRange>();
-            foreach (var row in rowRanges)
-            {
-                foreach (var col in colRanges)
-                {
-                    list.Add(ws.Range(row.Start, col.Start, row.End, col.End));
-                }
-            }
-            return list.ToArray();
-        }
-
-        private IXLRange[] GetPageRangesBySize(IXLWorksheet ws, double pageBreakHeight, double pageBreakWidth, int maxRow, int maxColumn)
-        {
-            // Set page break (height)
-            var rowRanges = new List<StartEnd>();
-            var pageStartRowNumber = 0;
-            double totalHeight = 0;
-
-            for (int i = 1; i <= maxRow; i++)
-            {
-                var row = ws.Row(i);
-
-                // Get the row height
-                double rowHeight = row.Height;
-                totalHeight += rowHeight;
-
-                if(pageStartRowNumber == 0)
-                {
-                    pageStartRowNumber = i;
-                }
-
-                // Insert a page break when the cumulative height exceeds the specified value
-                if (totalHeight >= pageBreakHeight)
-                {
-                    rowRanges.Add(new StartEnd { Start = pageStartRowNumber, End = i });
-
-                    // After page break, reset cumulative height and pageStartRowNumber
-                    totalHeight = 0;
-                    pageStartRowNumber = 0;
-                } 
-            }
-            if(0 < pageStartRowNumber)
-            {
-                rowRanges.Add(new StartEnd { Start = pageStartRowNumber, End = maxRow });
-            }
-
-            // Set page break (Width)
-            var colRanges = new List<StartEnd>();
-            var pageStartColNumber = 1;
-            double totalWidth = 0;
-
-            for (int i = 1; i <= maxColumn; i++)
-            {
-                var col = ws.Column(i);
-
-                // Get the column width
-                double colWidth = col.Width;
-                totalWidth += colWidth;
-
-                if(pageStartColNumber == 0)
-                { 
-                    pageStartColNumber = i; 
-                }
-
-                // Insert a page break when the cumulative width exceeds the specified value
-                if (totalWidth >= pageBreakWidth)
-                {
-                    colRanges.Add(new StartEnd { Start = pageStartColNumber, End = i });
-
-                    // After page break, reset cumulative width and pageStartColNumber
-                    totalWidth = 0;
-                    pageStartColNumber = 0;
-                }
-            }
-            if (0 < pageStartColNumber)
-            {
-                colRanges.Add(new StartEnd { Start = pageStartColNumber, End = maxColumn });
-            }
-
-            var list = new List<IXLRange>();
-            foreach (var row in rowRanges)
-            {
-                foreach (var col in colRanges)
-                {
-                    list.Add(ws.Range(row.Start, col.Start, row.End, col.End));
-                }
-            }
-            return list.ToArray();
-        }
-
-
-        private static IXLRange[] GetPageRangesByExcelOrder(IXLWorksheet ws, int maxRow, int maxColumn)
+        
+        static IXLRange[] GetPageRangesByExcelOrder(IXLWorksheet ws, int maxRow, int maxColumn)
         {
             var rowRanges = new List<StartEnd>();
             var rowIndex = 1;
@@ -632,11 +500,10 @@ namespace Excel.Report.PDF
 
             var marginX = marginLeft;
             var marginY = marginTop;
-            var pdfWidth = pdfWidthSrc - marginX - marginRight;
-            var pdfHeight = pdfHeightSrc - marginY - marginBottom;
 
             if (pageSetup.CenterHorizontally)
             {
+                var pdfWidth = pdfWidthSrc - marginX - marginRight;
                 if (totalWidth < pdfWidth)
                 {
                     marginX += ((pdfWidth - totalWidth) / 2);
@@ -644,6 +511,7 @@ namespace Excel.Report.PDF
             }
             if (pageSetup.CenterVertically)
             {
+                var pdfHeight = pdfHeightSrc - marginY - marginBottom;
                 if (totalHeight < pdfHeight)
                 {
                     marginY += ((pdfHeight - totalHeight) / 2);

@@ -20,33 +20,33 @@ namespace Excel.Report.PDF
             return ToPdfMemory(document);
         }
 
-        public static MemoryStream ConvertToPdf(string filePath, int sheetPosition, PageBreakInfo? pageBreakInfo = null)
+        public static MemoryStream ConvertToPdf(string filePath, int sheetPosition)
         {
             using var mem = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-            return ConvertToPdf(mem, sheetPosition, pageBreakInfo);
+            return ConvertToPdf(mem, sheetPosition);
         }
 
-        public static MemoryStream ConvertToPdf(Stream stream, int sheetPosition, PageBreakInfo? pageBreakInfo = null)
+        public static MemoryStream ConvertToPdf(Stream stream, int sheetPosition)
         {
             using var openClosedXML = new OpenClosedXML(stream);
             var converter = new VirtualRender(openClosedXML);
             var document = new PdfVirtualDocument();
-            converter.RenderTo(document, sheetPosition, pageBreakInfo);
+            converter.RenderTo(document, sheetPosition);
             return ToPdfMemory(document);
         }
 
-        public static MemoryStream ConvertToPdf(string filePath, string sheetName, PageBreakInfo? pageBreakInfo = null)
+        public static MemoryStream ConvertToPdf(string filePath, string sheetName)
         {
             using var mem = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-            return ConvertToPdf(mem, sheetName, pageBreakInfo);
+            return ConvertToPdf(mem, sheetName);
         }
 
-        public static MemoryStream ConvertToPdf(Stream stream, string sheetName, PageBreakInfo? pageBreakInfo = null)
+        public static MemoryStream ConvertToPdf(Stream stream, string sheetName)
         {
             using var openClosedXML = new OpenClosedXML(stream);
             var converter = new VirtualRender(openClosedXML);
             var document = new PdfVirtualDocument();
-            converter.RenderTo(document, openClosedXML.GetSheetPosition(sheetName), pageBreakInfo);
+            converter.RenderTo(document, openClosedXML.GetSheetPosition(sheetName));
             return ToPdfMemory(document);
         }
 

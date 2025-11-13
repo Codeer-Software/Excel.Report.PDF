@@ -21,22 +21,24 @@ namespace Excel.Report.PDF
         {
             for (int i = 1; i <= _openClosedXML.SheetCount; i++)
             {
-                RenderCore(document, i, null);
+                RenderCore(document, i);
             }
             _postProcessCommands.ExecuteAll();
         }
 
-        internal void RenderTo(IVirtualDocument document, int sheetPosition, PageBreakInfo? pageBreakInfo)
+        internal void RenderTo(IVirtualDocument document, int sheetPosition)
         {
-            RenderCore(document, sheetPosition, pageBreakInfo);
+            RenderCore(document, sheetPosition);
             _postProcessCommands.ExecuteAll();
         }
 
-        void RenderCore(IVirtualDocument document, int sheetPosition, PageBreakInfo? pageBreakInfo)
+        void RenderCore(IVirtualDocument document, int sheetPosition)
         {
+            //用紙サイズ、マージン情報、印刷範囲、ィットモード
+
             var ps = _openClosedXML.GetPageSetup(sheetPosition);
             var size = PaperSizeMap.GetPaperSize(ps.PaperSize);//TODO think size and fit. order by execl key word.
-            var allCells = _openClosedXML.GetCellInfo(sheetPosition, size.w.Point, size.h.Point, out var scaling, pageBreakInfo);
+            var allCells = _openClosedXML.GetCellInfo(sheetPosition, size.w.Point, size.h.Point, out var scaling);
             RenderTo(document, ps, allCells, scaling);
         }
 
