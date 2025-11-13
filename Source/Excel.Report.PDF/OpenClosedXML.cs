@@ -53,7 +53,7 @@ namespace Excel.Report.PDF
         {
             var workbookPart = _document.WorkbookPart;
             if (workbookPart == null) throw new InvalidDataException("Invalid sheet"); 
-            var sheet = workbookPart.Workbook.Sheets?.Elements<DocumentFormat.OpenXml.Spreadsheet.Sheet>().ElementAt(sheetPosition - 1);
+            var sheet = workbookPart.Workbook.Sheets?.Elements<Sheet>().ElementAt(sheetPosition - 1);
             if (sheet == null) throw new InvalidDataException("Invalid sheet");
             var workSheetPart = workbookPart.GetPartById(sheet.Id?.ToString() ?? string.Empty) as WorksheetPart;
             if (workSheetPart == null) throw new InvalidDataException("Invalid sheet");

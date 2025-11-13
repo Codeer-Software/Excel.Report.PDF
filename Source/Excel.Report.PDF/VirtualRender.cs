@@ -245,6 +245,10 @@ namespace Excel.Report.PDF
         void DrawCellText(IVirtualDocument document, IVirtualGraphics currentXG, double scaling, CellInfo cellInfo)
         {
             var cell = cellInfo.Cell!;
+            var text = cell.GetFormattedString();
+            var specialKeys = text.Split('|').Select(e => e.Trim()).ToList();
+            if (specialKeys.Contains("#Empty")) return;
+            if (specialKeys.Contains("#FitColumn")) return;
 
             // Alignment
             var format = new VirtualStringFormat();
@@ -288,7 +292,6 @@ namespace Excel.Report.PDF
             // Font
             double fontSize = cell.Style.Font.FontSize;
             var font = new VirtualFont(cell.Style.Font, scaling);
-            var text = cell.GetFormattedString();
             var xFontColor = _openClosedXML.ChangeColor(cell.Style.Font.FontColor) ?? new VirtualColor(255, 0, 0, 0);
 
             double w = cellInfo.MergedWidth != 0 ? cellInfo.MergedWidth : cellInfo.Width;
