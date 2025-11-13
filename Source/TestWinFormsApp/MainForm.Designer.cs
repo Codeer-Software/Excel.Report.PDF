@@ -50,7 +50,7 @@
             _buttonSettings.Name = "_buttonSettings";
             _buttonSettings.Size = new Size(75, 23);
             _buttonSettings.TabIndex = 1;
-            _buttonSettings.Text = "button2";
+            _buttonSettings.Text = "Settins";
             _buttonSettings.UseVisualStyleBackColor = true;
             _buttonSettings.Click += _buttonSettings_Click;
             // 

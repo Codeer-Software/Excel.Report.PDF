@@ -17,28 +17,27 @@ namespace Excel.Report.PDF
         internal VirtualRender(OpenClosedXML openClosedXML)
             => _openClosedXML = openClosedXML;
 
-        internal void RenderTo(IVirtualDocument document)
+        internal void RenderTo(IVirtualDocument document, PageSetup? pageSetup)
         {
             for (int i = 1; i <= _openClosedXML.SheetCount; i++)
             {
-                RenderCore(document, i);
+                RenderCore(document, pageSetup, i);
             }
             _postProcessCommands.ExecuteAll();
         }
 
-        internal void RenderTo(IVirtualDocument document, int sheetPosition)
+        internal void RenderTo(IVirtualDocument document, PageSetup? pageSetup, int sheetPosition)
         {
-            RenderCore(document, sheetPosition);
+            RenderCore(document, pageSetup, sheetPosition);
             _postProcessCommands.ExecuteAll();
         }
 
-        void RenderCore(IVirtualDocument document, int sheetPosition)
+        void RenderCore(IVirtualDocument document, PageSetup? pageSetup, int sheetPosition)
         {
-            //用紙サイズ、マージン情報、印刷範囲、ィットモード
-
             var ps = _openClosedXML.GetPageSetup(sheetPosition);
-            var size = PaperSizeMap.GetPaperSize(ps.PaperSize);//TODO think size and fit. order by execl key word.
-            var allCells = _openClosedXML.GetCellInfo(sheetPosition, size.w.Point, size.h.Point, out var scaling);
+            var ws = _openClosedXML.Workbook.Worksheet(sheetPosition);
+            if (pageSetup == null) pageSetup = PageSetup.FromIXLPageSetup(ws.PageSetup);
+            var allCells = _openClosedXML.GetCellInfo(pageSetup, sheetPosition, out var scaling);
             RenderTo(document, ps, allCells, scaling);
         }
 

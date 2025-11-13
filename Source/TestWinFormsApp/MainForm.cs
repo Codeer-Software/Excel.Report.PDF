@@ -36,7 +36,7 @@ namespace TestWinFormsApp
 
         private void _buttonSettings_Click(object sender, EventArgs e)
         {
-
+            _pageSetup.ShowDialog(this);
         }
     }
 }

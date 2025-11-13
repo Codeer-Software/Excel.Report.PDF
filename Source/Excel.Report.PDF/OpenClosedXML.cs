@@ -8,18 +8,47 @@ using Color = System.Drawing.Color;
 
 namespace Excel.Report.PDF
 {
-    //廃棄
+    class Margins
+    {
+        internal double Left { get; set; }
+        internal double Right { get; set; }
+        internal double Top { get; set; }
+        internal double Bottom { get; set; }
+        internal double Header { get; set; }
+        internal double Footer { get; set; }
+    }
 
-    //やりたいことは
-    //右端の列を決める⇒これいるか？⇒まあいるかじゃないとエクセルの改ページにひっかかるしな⇒いやそれもむしやわ
-    //＋Fitさせる、#FitCol|#FitRowCol|#LastCol("AX")
-    //とはいえ、これ使ったら改ページは明らかにずれるよな？⇒そんなもんってしとくか⇒なんなら後で足せばいいしな
+    class PageSetup
+    {
+        internal Margins Margins { get; set; } = new Margins();
+        internal bool CenterHorizontally { get; set; }
+        internal bool CenterVertically { get; set; }
+        internal int Scale { get; set; } = 100;
+        internal double Width { get; set; }
+        internal double Height { get; set; }
 
-
-    //★これはエクセルで指定させる必要あるのか？
-    //マージンと紙のサイズは上から渡すこともできる
-        //⇒これはPrintDocumentだけでええけど、渡せる仕組みは必要
-
+        internal static PageSetup FromIXLPageSetup(IXLPageSetup pageSetup)
+        {
+            (var w, var h) = PaperSizeMap.GetPaperSize(pageSetup.PaperSize);
+            return new PageSetup
+            {
+                Margins = new Margins
+                {
+                    Left = pageSetup.Margins.Left,
+                    Right = pageSetup.Margins.Right,
+                    Top = pageSetup.Margins.Top,
+                    Bottom = pageSetup.Margins.Bottom,
+                    Header = pageSetup.Margins.Header,
+                    Footer = pageSetup.Margins.Footer
+                },
+                CenterHorizontally = pageSetup.CenterHorizontally,
+                CenterVertically = pageSetup.CenterVertically,
+                Scale = pageSetup.Scale,
+                Width = w.Point,
+                Height = h.Point
+            };
+        }
+    }
     class OpenClosedXML : IDisposable
     {
         readonly SpreadsheetDocument _document; 
@@ -60,12 +89,19 @@ namespace Excel.Report.PDF
             return workSheetPart;
         }
 
-        internal List<List<CellInfo>> GetCellInfo(int sheetPosition, double pdfWidthSrc, double pdfHeightSrc, out double scaling)
-            => GetCellInfo(Workbook.Worksheet(sheetPosition), GetWorkSheetPartByPosition(sheetPosition), pdfWidthSrc, pdfHeightSrc, out scaling);
-        
-        List<List<CellInfo>> GetCellInfo(IXLWorksheet ws, WorksheetPart worksheetPart, double pdfWidthSrc, double pdfHeightSrc, out double scaling)
-            => GetCellInfo(ws.PageSetup, pdfWidthSrc, pdfHeightSrc,
-                GetPageRanges(ws, worksheetPart), ws.MergedRanges.ToArray(), ws.Pictures.OfType<IXLPicture>().ToArray(), out scaling);
+        internal List<List<CellInfo>> GetCellInfo(PageSetup pageSetup, int sheetPosition, out double scaling)
+        {
+            var ws = Workbook.Worksheet(sheetPosition);
+            var worksheetPart = GetWorkSheetPartByPosition(sheetPosition);
+            var ranges = GetPageRanges(ws, worksheetPart);
+
+            var text = ws.GetText(1, 1);
+            var specialKeys = text.Split('|').Select(e => e.Trim()).ToList();
+            var isFit = specialKeys.Contains("#FitColumn");
+
+            return GetCellInfo(pageSetup, ranges, 
+                ws.MergedRanges.ToArray(), ws.Pictures.OfType<IXLPicture>().ToArray(), isFit, out scaling);
+        }
 
         internal VirtualPen ConvertToPen(XLBorderStyleValues borderStyle, XLColor? color, double scale)
         {
@@ -366,9 +402,10 @@ namespace Excel.Report.PDF
         }
 
         static List<List<CellInfo>> GetCellInfo(
-            IXLPageSetup pageSetup, double pdfWidthSrc, double pdfHeightSrc,
-            IXLRange[] ranges, IXLRange[] mergedRanges, IXLPicture[] pictures, out double scaling)
+            PageSetup pageSetup, IXLRange[] ranges, IXLRange[] mergedRanges, IXLPicture[] pictures, bool isFit, out double scaling)
         {
+            //TODO Scaling
+
             var indexAndPictures = pictures.Select((Picture, Index) => new { Picture, Index }).ToList();
 
             scaling = ((double)pageSetup.Scale) / 100;
@@ -376,8 +413,7 @@ namespace Excel.Report.PDF
             var allCells = new List<List<CellInfo>>();
             foreach (var range in ranges)
             {
-                //TODO It would be better to be able to pass margin and scaling from higher level. It would be more flexible.
-                var (marginX, marginY) = GetMargin(pageSetup, pdfWidthSrc, pdfHeightSrc, range);
+                var (marginX, marginY) = GetMargin(pageSetup, range);
 
                 double yOffset = 0;
                 var cells = new List<CellInfo>();
@@ -474,7 +510,7 @@ namespace Excel.Report.PDF
         }
 
         //TODO There's no need for merge settings like this, maybe it's a remnant from when we were doing things like zoom ratios?
-        static (double marginX, double marginY) GetMargin(IXLPageSetup pageSetup, double pdfWidthSrc, double pdfHeightSrc, IXLRange range)
+        static (double marginX, double marginY) GetMargin(PageSetup pageSetup, IXLRange range)
         {
             var marginLeft = InchToPoint(pageSetup.Margins.Left);
             var marginTop = InchToPoint(pageSetup.Margins.Top + pageSetup.Margins.Header);
@@ -503,7 +539,7 @@ namespace Excel.Report.PDF
 
             if (pageSetup.CenterHorizontally)
             {
-                var pdfWidth = pdfWidthSrc - marginX - marginRight;
+                var pdfWidth = pageSetup.Width - marginX - marginRight;
                 if (totalWidth < pdfWidth)
                 {
                     marginX += ((pdfWidth - totalWidth) / 2);
@@ -511,7 +547,7 @@ namespace Excel.Report.PDF
             }
             if (pageSetup.CenterVertically)
             {
-                var pdfHeight = pdfHeightSrc - marginY - marginBottom;
+                var pdfHeight = pageSetup.Height - marginY - marginBottom;
                 if (totalHeight < pdfHeight)
                 {
                     marginY += ((pdfHeight - totalHeight) / 2);
