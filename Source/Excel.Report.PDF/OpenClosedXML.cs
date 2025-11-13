@@ -1,8 +1,9 @@
 ﻿using ClosedXML.Excel;
-using DocumentFormat.OpenXml.Packaging;
-using DocumentFormat.OpenXml.Drawing;
-using DocumentFormat.OpenXml;
 using ClosedXML.Excel.Drawings;
+using DocumentFormat.OpenXml;
+using DocumentFormat.OpenXml.Drawing;
+using DocumentFormat.OpenXml.Drawing.Charts;
+using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Spreadsheet;
 using Color = System.Drawing.Color;
 
@@ -49,6 +50,13 @@ namespace Excel.Report.PDF
             };
         }
     }
+
+    class RenderInfo
+    {
+        internal List<CellInfo> Cells { get; set; } = new List<CellInfo>();
+        internal double Scaling { get; set; }
+    }
+
     class OpenClosedXML : IDisposable
     {
         readonly SpreadsheetDocument _document; 
@@ -89,7 +97,7 @@ namespace Excel.Report.PDF
             return workSheetPart;
         }
 
-        internal List<List<CellInfo>> GetCellInfo(PageSetup pageSetup, int sheetPosition, out double scaling)
+        internal List<RenderInfo> GetCellInfo(PageSetup pageSetup, int sheetPosition)
         {
             var ws = Workbook.Worksheet(sheetPosition);
             var worksheetPart = GetWorkSheetPartByPosition(sheetPosition);
@@ -97,10 +105,10 @@ namespace Excel.Report.PDF
 
             var text = ws.GetText(1, 1);
             var specialKeys = text.Split('|').Select(e => e.Trim()).ToList();
-            var isFit = specialKeys.Contains("#FitColumn");
+            var isFitColumn = specialKeys.Contains("#FitColumn");
 
             return GetCellInfo(pageSetup, ranges, 
-                ws.MergedRanges.ToArray(), ws.Pictures.OfType<IXLPicture>().ToArray(), isFit, out scaling);
+                ws.MergedRanges.ToArray(), ws.Pictures.OfType<IXLPicture>().ToArray(), isFitColumn);
         }
 
         internal VirtualPen ConvertToPen(XLBorderStyleValues borderStyle, XLColor? color, double scale)
@@ -401,18 +409,16 @@ namespace Excel.Report.PDF
             return noc256 * mdw + pp;
         }
 
-        static List<List<CellInfo>> GetCellInfo(
-            PageSetup pageSetup, IXLRange[] ranges, IXLRange[] mergedRanges, IXLPicture[] pictures, bool isFit, out double scaling)
+        static List<RenderInfo> GetCellInfo(
+            PageSetup pageSetup, IXLRange[] ranges, IXLRange[] mergedRanges, IXLPicture[] pictures, bool isFitColumn)
         {
-            //TODO Scaling
-
             var indexAndPictures = pictures.Select((Picture, Index) => new { Picture, Index }).ToList();
 
-            scaling = ((double)pageSetup.Scale) / 100;
-
-            var allCells = new List<List<CellInfo>>();
+            var renderInfoList = new List<RenderInfo>();
             foreach (var range in ranges)
             {
+                var scaling = ((double)pageSetup.Scale) / 100;
+
                 var (marginX, marginY) = GetMargin(pageSetup, range);
 
                 double yOffset = 0;
@@ -466,47 +472,51 @@ namespace Excel.Report.PDF
                     yOffset += scaledHeight;
                 }
 
-                allCells.Add(cells);
+                renderInfoList.Add(new RenderInfo { Cells = cells, Scaling = scaling });
             }
 
-            // Add margin info
-            var infoList = allCells.SelectMany(e => e);
-            foreach (var range in mergedRanges)
-            {
-                var firstCellId = range.FirstCell().Address.UniqueId;
-                var lastCellId = range.LastCell().Address.UniqueId;
-                var firstInfo = infoList.FirstOrDefault(e => e.Cell?.Address.UniqueId == firstCellId);
-                var lastInfo = infoList.FirstOrDefault(e => e.Cell?.Address.UniqueId == lastCellId);
-                if (firstInfo == null) continue;
-                double w = 0, h = 0;
-                bool getW = true;
-                foreach (var row in range.Rows())
+            foreach(var renderInfo in renderInfoList)
+            {            
+                // Add margin info
+                var infoList = renderInfo.Cells.ToList();
+                foreach (var range in mergedRanges)
                 {
-                    if (getW)
+                    var firstCellId = range.FirstCell().Address.UniqueId;
+                    var lastCellId = range.LastCell().Address.UniqueId;
+                    var firstInfo = infoList.FirstOrDefault(e => e.Cell?.Address.UniqueId == firstCellId);
+                    var lastInfo = infoList.FirstOrDefault(e => e.Cell?.Address.UniqueId == lastCellId);
+                    if (firstInfo == null) continue;
+                    double w = 0, h = 0;
+                    bool getW = true;
+                    foreach (var row in range.Rows())
+                    {
+                        if (getW)
+                        {
+                            foreach (var cell in row.Cells())
+                            {
+                                w += cell.WorksheetColumn().Width;
+                            }
+                        }
+                        getW = false;
+                        h += row.WorksheetRow().Height;
+                    }
+                    firstInfo.MergedWidth = ColumnWidthToPoint(w) * renderInfo.Scaling;
+                    firstInfo.MergedHeight = h * renderInfo.Scaling;
+
+                    foreach (var row in range.Rows())
                     {
                         foreach (var cell in row.Cells())
                         {
-                            w += cell.WorksheetColumn().Width;
+                            var merged = infoList.FirstOrDefault(e => e.Cell?.Address.UniqueId == cell.Address.UniqueId);
+                            if (merged == null) continue;
+                            merged.MergedFirstCell = firstInfo;
+                            merged.MergedLastCell = lastInfo;
                         }
-                    }
-                    getW = false;
-                    h += row.WorksheetRow().Height;
-                }
-                firstInfo.MergedWidth = ColumnWidthToPoint(w) * scaling;
-                firstInfo.MergedHeight = h * scaling;
-
-                foreach (var row in range.Rows())
-                {
-                    foreach (var cell in row.Cells())
-                    {
-                        var merged = infoList.FirstOrDefault(e => e.Cell?.Address.UniqueId == cell.Address.UniqueId);
-                        if (merged == null) continue;
-                        merged.MergedFirstCell = firstInfo;
-                        merged.MergedLastCell = lastInfo;
                     }
                 }
             }
-            return allCells;
+
+            return renderInfoList;
         }
 
         //TODO There's no need for merge settings like this, maybe it's a remnant from when we were doing things like zoom ratios?

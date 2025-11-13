@@ -37,34 +37,34 @@ namespace Excel.Report.PDF
             var ps = _openClosedXML.GetPageSetup(sheetPosition);
             var ws = _openClosedXML.Workbook.Worksheet(sheetPosition);
             if (pageSetup == null) pageSetup = PageSetup.FromIXLPageSetup(ws.PageSetup);
-            var allCells = _openClosedXML.GetCellInfo(pageSetup, sheetPosition, out var scaling);
-            RenderTo(document, ps, allCells, scaling);
+            var allCells = _openClosedXML.GetCellInfo(pageSetup, sheetPosition);
+            RenderTo(document, ps, allCells);
         }
 
-        void RenderTo(IVirtualDocument document, IXLPageSetup ps, List<List<CellInfo>> bookCells, double scaling)
+        void RenderTo(IVirtualDocument document, IXLPageSetup ps, List<RenderInfo> boolRenderInfo)
         {
-            foreach(var sheetCells in bookCells)
+            foreach(var sheetRenderInfo in boolRenderInfo)
             {
                 var page = document.AddPage(ps);
                 var gfx = page.CreateGraphics();
                 var drawLineCache = new DrawLineCache(gfx);
 
                 // Since there are duplicate parts, the loops are separated to prevent overwriting.
-                foreach (var cellInfo in sheetCells)
+                foreach (var cellInfo in sheetRenderInfo.Cells)
                 {
                     FillCellBackColor(gfx, cellInfo);
                 }
-                foreach (var cellInfo in sheetCells)
+                foreach (var cellInfo in sheetRenderInfo.Cells)
                 {
-                    DrawRuledLine(drawLineCache, scaling, cellInfo);
+                    DrawRuledLine(drawLineCache, sheetRenderInfo.Scaling, cellInfo);
                 }
-                foreach (var cellInfo in sheetCells)
+                foreach (var cellInfo in sheetRenderInfo.Cells)
                 {
-                    DrawCellText(document, gfx, scaling, cellInfo);
+                    DrawCellText(document, gfx, sheetRenderInfo.Scaling, cellInfo);
                 }
 
                 var pictureInfoAndCellInfo = new List<PictureInfoAndCellInfo>();
-                foreach (var cellInfo in sheetCells)
+                foreach (var cellInfo in sheetRenderInfo.Cells)
                 {
                     foreach (var e in cellInfo.Pictures)
                     {
