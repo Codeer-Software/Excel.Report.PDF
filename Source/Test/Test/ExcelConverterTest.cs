@@ -68,6 +68,9 @@ namespace Test
         [Test]
         public void TestRect() => Convert("TestRect");
 
+        [Test]
+        public void TestFitColumn() => Convert("TestFitColumn");
+
         //
 
         [Test]

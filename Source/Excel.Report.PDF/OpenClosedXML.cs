@@ -417,9 +417,7 @@ namespace Excel.Report.PDF
             var renderInfoList = new List<RenderInfo>();
             foreach (var range in ranges)
             {
-                var scaling = ((double)pageSetup.Scale) / 100;
-
-                var (marginX, marginY) = GetMargin(pageSetup, range);
+                var (marginX, marginY, scaling) = GetMarginAndScaling(pageSetup, range, isFitColumn);
 
                 double yOffset = 0;
                 var cells = new List<CellInfo>();
@@ -519,13 +517,11 @@ namespace Excel.Report.PDF
             return renderInfoList;
         }
 
-        //TODO There's no need for merge settings like this, maybe it's a remnant from when we were doing things like zoom ratios?
-        static (double marginX, double marginY) GetMargin(PageSetup pageSetup, IXLRange range)
+        static (double marginX, double marginY, double scaling) GetMarginAndScaling(PageSetup pageSetup, IXLRange range, bool isFitColumn)
         {
             var marginLeft = InchToPoint(pageSetup.Margins.Left);
             var marginTop = InchToPoint(pageSetup.Margins.Top + pageSetup.Margins.Header);
 
-            if (!pageSetup.CenterHorizontally && !pageSetup.CenterVertically) return (marginLeft, marginTop);
 
             var marginRight = InchToPoint(pageSetup.Margins.Right);
             var marginBottom = InchToPoint(pageSetup.Margins.Bottom + pageSetup.Margins.Footer);
@@ -542,6 +538,17 @@ namespace Excel.Report.PDF
                         totalWidth += ColumnWidthToPoint(cell.WorksheetColumn().Width);
                     }
                 }
+            }
+
+            var scaling = ((double)pageSetup.Scale) / 100;
+
+            //FitColumn
+            if (isFitColumn)
+            {
+                var pdfWidth = pageSetup.Width - marginLeft - marginRight;
+                scaling = pdfWidth / totalWidth;
+                totalWidth = totalWidth * scaling;
+                totalHeight = totalHeight * scaling;
             }
 
             var marginX = marginLeft;
@@ -564,7 +571,7 @@ namespace Excel.Report.PDF
                 }
             }
 
-            return (marginX, marginY);
+            return (marginX, marginY, scaling);
         }
 
         internal List<string> GetSheetNames()
