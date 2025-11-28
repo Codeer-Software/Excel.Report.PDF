@@ -61,7 +61,7 @@ namespace Test
         [Test]
         public async Task Test1()
         {
-            var data = new Quotation 
+            var data = new Quotation
             {
                 Title = "宴会時の食材",
                 Client = "エクセルコンサルティング株式会社",
@@ -128,6 +128,78 @@ namespace Test
 
             using var outStream = ExcelConverter.ConvertToPdf(Path.Combine(TestEnvironment.TestResultsPath, "QuotationDst.xlsx"), 1);
             File.WriteAllBytes(Path.Combine(TestEnvironment.TestResultsPath, "Quotation.pdf"), outStream.ToArray());
+        }
+
+        [Test]
+        public async Task Test2()
+        {
+            var data = new Quotation
+            {
+                Title = "宴会時の食材",
+                Client = "エクセルコンサルティング株式会社",
+                PersonInCharge = "大谷正一"
+            };
+            data.Details.Add(new()
+            {
+                Title = "鯛",
+                Detail = "新鮮",
+                Price = 10000,
+                Discount = 0,
+            });
+            data.Details.Add(new()
+            {
+                Title = "鰤",
+                Detail = "新鮮",
+                Price = 20000,
+                Discount = 0,
+            });
+            data.Details.Add(new()
+            {
+                Title = "ハマチ",
+                Detail = "ご奉仕品",
+                Price = 30000,
+                Discount = 2000,
+            });
+            data.Details.Add(new()
+            {
+                Title = "蛸",
+                Detail = "ご奉仕品",
+                Price = 40000,
+                Discount = 1000,
+            });
+            using (var stream = new FileStream(Path.Combine(TestEnvironment.PdfSrcPath, "Quotation2.xlsx"), FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+            using (var book = new XLWorkbook(stream))
+            {
+                await book.Worksheet(1).OverWrite(new ObjectExcelSymbolConverter(data));
+                book.SaveAs(Path.Combine(TestEnvironment.TestResultsPath, "QuotationDst2.xlsx"));
+
+                var sheet = book.Worksheets.First();
+
+                // B4:The part unrelated to the loop, The point where data is initially stored
+                var noLoopFirstData = sheet.Cell(4, 2).Value.GetText();
+                noLoopFirstData.Is("エクセルコンサルティング株式会社");
+
+                // B18:The first line of the loop, Verify if the data is output as it is.
+                var firstLoopData = sheet.Cell(18, 2).Value.GetText();
+                firstLoopData.Is("鯛");
+
+                // V21:The last loop, Check if the total value is stored
+                var lastLoopSubtractData = sheet.Cell(21, 22).Value.GetNumber().ToString();
+                lastLoopSubtractData.Is("39000");
+
+                // V26:The last line, Check if the sum of each row and the tax is stored
+                var lastData = sheet.Cell(34, 22).Value.GetNumber().ToString();
+                lastData.Is("106700");
+
+
+                // R14:Merging cells, Check if it is the same as the value in V26
+                var total = sheet.Cell(14, 18).Value.GetNumber().ToString();
+                total.Is("106700");
+
+            }
+
+            using var outStream = ExcelConverter.ConvertToPdf(Path.Combine(TestEnvironment.TestResultsPath, "QuotationDst2.xlsx"), 1);
+            File.WriteAllBytes(Path.Combine(TestEnvironment.TestResultsPath, "Quotation2.pdf"), outStream.ToArray());
         }
 
         [Test]

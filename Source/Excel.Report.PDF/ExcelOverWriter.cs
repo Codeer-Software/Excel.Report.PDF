@@ -220,7 +220,7 @@ namespace Excel.Report.PDF
                 }
 
                 // copy rows
-                CopyRows(sheet, i, loopInfo.RowCopyCount, loopInfo.LoopList.Count, loopInfo.IsInsertMode);
+                CopyRows(sheet, i, loopInfo.RowCopyCount, loopInfo.LoopList.Count, loopInfo.IsInsertMode, loopInfo.IsFormatCopy);
 
                 // over write
                 bool isFirstLoop = true;
@@ -246,6 +246,7 @@ namespace Excel.Report.PDF
             internal List<object?> LoopList { get; set; } = new();
             internal string LoopName { get; set; } = string.Empty;
             internal bool IsInsertMode { get; set; }
+            internal bool IsFormatCopy { get; set; } = true;
         }
 
         static async Task<bool> TryParseLoop(string leftCell, IExcelSymbolConverter converter, LoopInfo loopInfo, string sheetName, List<PageLoopRowsInfo> pageLoopRowsInfoList)
@@ -257,9 +258,12 @@ namespace Excel.Report.PDF
         static async Task<bool> TryParseLoopNormal(string leftCell, IExcelSymbolConverter converter, LoopInfo loopInfo)
         {
             if (!leftCell.StartsWith("#LoopRow")) return false;
+            var isLoopRowData = leftCell.StartsWith("#LoopRowData");
 
             // #LoopRow($list, i, rowCopyCount)
-            var args = leftCell.Replace("#LoopRow", "").Replace("(", "").Replace(")", "").Split(',').Select(e => e.Trim()).ToArray();
+            var args = isLoopRowData ?
+                leftCell.Replace("#LoopRowData", "").Replace("(", "").Replace(")", "").Split(',').Select(e => e.Trim()).ToArray():
+                leftCell.Replace("#LoopRow", "").Replace("(", "").Replace(")", "").Split(',').Select(e => e.Trim()).ToArray();
 
             // rowCopyCount is optional
             var rowCopyCount = 1;
@@ -267,7 +271,8 @@ namespace Excel.Report.PDF
             {
                 if (!int.TryParse(args[2], out rowCopyCount)) return false;
             }
-            loopInfo.IsInsertMode = true;
+            loopInfo.IsInsertMode = !isLoopRowData;
+            loopInfo.IsFormatCopy = !isLoopRowData;
             loopInfo.RowCopyCount = rowCopyCount;
 
             // #list and i(enumerable name) are must
@@ -291,6 +296,7 @@ namespace Excel.Report.PDF
             var args = leftCell.Replace("#PagedLoopRows", "").Replace("(", "").Replace(")", "").Split(',').Select(e => e.Trim()).ToArray();
             if (!int.TryParse(args[4], out var blockRowCount)) return false;
             loopInfo.IsInsertMode = false;
+            loopInfo.IsFormatCopy = true;
 
             var first = pageLoopRowsInfoList.FirstOrDefault(e => e.FirstPageSheetName == sheetName);
             if (first != null)
@@ -368,7 +374,7 @@ namespace Excel.Report.PDF
             cell.SetValue(XLCellValue.FromObject(cellData.Value));
         }
 
-        static void CopyRows(IXLWorksheet sheet, int rowIndex, int rowCopyCount, int loopCount, bool isInsertMode)
+        static void CopyRows(IXLWorksheet sheet, int rowIndex, int rowCopyCount, int loopCount, bool isInsertMode, bool formatCopy)
         {
             var rangeToCopy = sheet.Range($"{rowIndex}:{rowIndex + rowCopyCount - 1}");
 
@@ -383,7 +389,26 @@ namespace Excel.Report.PDF
                 var insertRow = isInsertMode ?
                     sheet.Row(insertRowIndex).InsertRowsAbove(rowCopyCount).First() :
                     sheet.Row(insertRowIndex);
-                rangeToCopy.CopyTo(insertRow);
+
+                if (formatCopy)
+                {
+                    rangeToCopy.CopyTo(insertRow);
+                }
+                else
+                {
+                    var srcFirstRow = rangeToCopy.RangeAddress.FirstAddress.RowNumber;
+
+                    foreach (var srcCell in rangeToCopy.Cells())
+                    {
+                        var rowOffset = srcCell.Address.RowNumber - srcFirstRow;
+                        var destRow = insertRowIndex + rowOffset;
+                        var destCol = srcCell.Address.ColumnNumber;
+
+                        var destCell = sheet.Cell(destRow, destCol);
+                        destCell.Value = srcCell.Value; 
+                    }
+                }
+
                 for (int j = 0; j < rowCopyCount; j++)
                 {
                     sheet.Row(insertRowIndex + j).Height = srcHeights[j];
