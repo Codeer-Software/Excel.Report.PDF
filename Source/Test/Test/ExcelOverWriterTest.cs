@@ -188,7 +188,7 @@ namespace Test
                 lastLoopSubtractData.Is("39000");
 
                 // V26:The last line, Check if the sum of each row and the tax is stored
-                var lastData = sheet.Cell(34, 22).Value.GetNumber().ToString();
+                var lastData = sheet.Cell(31, 22).Value.GetNumber().ToString();
                 lastData.Is("106700");
 
 

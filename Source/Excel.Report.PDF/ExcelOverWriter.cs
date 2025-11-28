@@ -405,13 +405,16 @@ namespace Excel.Report.PDF
                         var destCol = srcCell.Address.ColumnNumber;
 
                         var destCell = sheet.Cell(destRow, destCol);
-                        destCell.Value = srcCell.Value; 
+                        destCell.Value = srcCell.Value;
                     }
                 }
 
                 for (int j = 0; j < rowCopyCount; j++)
                 {
-                    sheet.Row(insertRowIndex + j).Height = srcHeights[j];
+                    if (formatCopy)
+                    {
+                        sheet.Row(insertRowIndex + j).Height = srcHeights[j];
+                    }
                 }
             }
         }
