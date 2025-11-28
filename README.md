@@ -48,9 +48,10 @@ First, create an Excel file according to the rules.
 Write the string you want to convey to the program after the $ sign.<br>
 <img src="Image/SymbolDollar.png">
 
-### 2. [#LoopRow($elements, elementName, copyRowCount)]
-It can be specified in column A. Copies the specified row as many times as copyRowCount and adds the row.
-In the copied column, you can specify the symbol of the repeating element using elementName.
+### 2. [#LoopRow($elements, elementName, copyRowCount)], [#LoopRowData($elements, elementName, copyRowCount)]
+LoopRow copies the specified row copyRowCount times and adds a row.
+LoopRowData uses the original format without copying the row. It only loops over the data.
+You can specify the symbol of the repeating element in elementName for the column to loop over.
 
 | Name |  |
 | ---- | ---- |
