@@ -71,7 +71,8 @@ namespace Test
         [Test]
         public void TestFitColumn() => Convert("TestFitColumn");
 
-        //
+        [Test]
+        public void TestCenter() => Convert("TestCenter");
 
         [Test]
         public void TestMultiSheet()

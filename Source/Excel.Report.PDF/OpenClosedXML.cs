@@ -492,13 +492,13 @@ namespace Excel.Report.PDF
                         {
                             foreach (var cell in row.Cells())
                             {
-                                w += cell.WorksheetColumn().Width;
+                                w += ColumnWidthToPoint(cell.WorksheetColumn().Width);
                             }
                         }
                         getW = false;
                         h += row.WorksheetRow().Height;
                     }
-                    firstInfo.MergedWidth = ColumnWidthToPoint(w) * renderInfo.Scaling;
+                    firstInfo.MergedWidth = w * renderInfo.Scaling;
                     firstInfo.MergedHeight = h * renderInfo.Scaling;
 
                     foreach (var row in range.Rows())
