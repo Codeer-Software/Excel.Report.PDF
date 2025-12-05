@@ -378,11 +378,30 @@ namespace Excel.Report.PDF
         {
             var rangeToCopy = sheet.Range($"{rowIndex}:{rowIndex + rowCopyCount - 1}");
 
-            var srcHeights = new List<double>();
-            for (int i = 0; i < rowCopyCount; i++)
+            double[] srcHeights = new double[0];
+            if (formatCopy)
             {
-                srcHeights.Add(sheet.Row(rowIndex + i).Height);
+                srcHeights = new double[rowCopyCount];
+                for (int i = 0; i < rowCopyCount; i++)
+                {
+                    srcHeights[i] = sheet.Row(rowIndex + i).Height;
+                }
             }
+            int srcFirstRow = rowIndex;
+            (int RowOffset, int ColumnNumber, XLCellValue Value)[] srcCellsCache = null!;
+            if (!formatCopy)
+            {
+                srcCellsCache = rangeToCopy
+                    .CellsUsed()
+                    .Select(c =>
+                    (
+                        RowOffset: c.Address.RowNumber - srcFirstRow,
+                        ColumnNumber: c.Address.ColumnNumber,
+                        Value: c.Value
+                    ))
+                    .ToArray();
+            }
+
             for (int i = 1; i < loopCount; i++)
             {
                 var insertRowIndex = rowIndex + rowCopyCount * i;
@@ -393,27 +412,18 @@ namespace Excel.Report.PDF
                 if (formatCopy)
                 {
                     rangeToCopy.CopyTo(insertRow);
+                    for (int j = 0; j < rowCopyCount; j++)
+                    {
+                        sheet.Row(insertRowIndex + j).Height = srcHeights[j];
+                    }
                 }
                 else
                 {
-                    var srcFirstRow = rangeToCopy.RangeAddress.FirstAddress.RowNumber;
-
-                    foreach (var srcCell in rangeToCopy.Cells())
+                    foreach (var src in srcCellsCache)
                     {
-                        var rowOffset = srcCell.Address.RowNumber - srcFirstRow;
-                        var destRow = insertRowIndex + rowOffset;
-                        var destCol = srcCell.Address.ColumnNumber;
-
-                        var destCell = sheet.Cell(destRow, destCol);
-                        destCell.Value = srcCell.Value;
-                    }
-                }
-
-                for (int j = 0; j < rowCopyCount; j++)
-                {
-                    if (formatCopy)
-                    {
-                        sheet.Row(insertRowIndex + j).Height = srcHeights[j];
+                        var destRow = insertRowIndex + src.RowOffset;
+                        var destCell = sheet.Cell(destRow, src.ColumnNumber);
+                        destCell.Value = src.Value;
                     }
                 }
             }
