@@ -249,6 +249,9 @@ namespace Excel.Report.PDF
             if (specialKeys.Contains("#Empty")) return;
             if (specialKeys.Contains("#FitColumn")) return;
 
+            //special formating: do not draw
+            if (cell.Style.NumberFormat.Format == ";;;") return;
+
             // Alignment
             var format = new VirtualStringFormat();
             switch (cell.Style.Alignment.Horizontal)

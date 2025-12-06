@@ -73,10 +73,11 @@ namespace Test
 
         [Test]
         public void TestCenter() => Convert("TestCenter");
-
-
         [Test]
         public void TestFit() => Convert("TestFit");
+
+        [Test]
+        public void TestHideCell() => Convert("TestHideCell");
 
         [Test]
         public void TestMultiSheet()
