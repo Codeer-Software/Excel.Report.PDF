@@ -27,6 +27,7 @@ namespace Excel.Report.PDF
         internal int Scale { get; set; } = 100;
         internal double Width { get; set; }
         internal double Height { get; set; }
+        internal bool IsFitColumn { get; set; }
 
         internal static PageSetup FromIXLPageSetup(IXLPageSetup pageSetup)
         {
@@ -46,7 +47,8 @@ namespace Excel.Report.PDF
                 CenterVertically = pageSetup.CenterVertically,
                 Scale = pageSetup.Scale,
                 Width = w.Point,
-                Height = h.Point
+                Height = h.Point,
+                IsFitColumn = pageSetup.PagesWide == 1 && pageSetup.PagesTall == 1
             };
         }
     }
@@ -541,9 +543,10 @@ namespace Excel.Report.PDF
             }
 
             var scaling = ((double)pageSetup.Scale) / 100;
+            if (scaling == 0) scaling = 1.0;
 
             //FitColumn
-            if (isFitColumn)
+            if (isFitColumn || pageSetup.IsFitColumn)
             {
                 var pdfWidth = pageSetup.Width - marginLeft - marginRight;
                 scaling = pdfWidth / totalWidth;
