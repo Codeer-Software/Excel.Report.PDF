@@ -48,7 +48,7 @@ namespace Excel.Report.PDF
                 Scale = pageSetup.Scale,
                 Width = w.Point,
                 Height = h.Point,
-                IsFitColumn = pageSetup.PagesWide == 1 && pageSetup.PagesTall == 1
+                IsFitColumn = 0 < pageSetup.PagesWide
             };
         }
     }
