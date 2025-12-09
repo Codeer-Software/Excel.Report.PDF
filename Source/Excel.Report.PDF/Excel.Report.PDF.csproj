@@ -14,9 +14,7 @@
     <PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
 	<PackageReleaseNotes>
 		# Adjustment
-		- Setting one page fit in Excel.
-		- Adjusted center alignment drawing.
-		- Cells formatted as ;;; are no longer drawn
+		- Updated the version of the referenced library.
 	</PackageReleaseNotes>
   </PropertyGroup>
 
