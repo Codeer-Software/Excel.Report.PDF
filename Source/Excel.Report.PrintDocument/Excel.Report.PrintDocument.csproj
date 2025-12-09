@@ -5,7 +5,7 @@
 	  <ImplicitUsings>enable</ImplicitUsings>
 	  <Nullable>enable</Nullable>
 	  <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
-	  <Version>0.27.0</Version>
+	  <Version>0.32.0</Version>
 	  <Description>Functions can now be added externally.</Description>
 	  <PackageProjectUrl>https://github.com/Codeer-Software/Excel.Report.PDF</PackageProjectUrl>
 	  <RepositoryUrl>https://github.com/Codeer-Software/Excel.Report.PDF</RepositoryUrl>
