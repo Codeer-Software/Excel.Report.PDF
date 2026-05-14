@@ -162,6 +162,40 @@ Detailed semantics, edge cases, and worked examples are split across the documen
 
 ---
 
+## Extending with your own `#Function`
+
+`#Image` and `#QR` are themselves implementations of the public [`IOverWriteFunction`](Source/Excel.Report.PDF/IOverWriteFunction.cs) interface. You can register additional `#YourName(...)` directives in **two lines of code** — there are no internal hooks involved.
+
+```csharp
+using ClosedXML.Excel;
+using Excel.Report.PDF;
+
+public sealed class UpperFunction : IOverWriteFunction
+{
+    public string Name => "Upper";   // matched as "#Upper(...)"
+
+    public Task InvokeAsync(IXLWorksheet sheet, int rowIndex, int colIndex, object?[] args)
+    {
+        var text = args.ElementAtOrDefault(0)?.ToString() ?? string.Empty;
+        sheet.Cell(rowIndex, colIndex).SetValue(XLCellValue.FromObject(text.ToUpperInvariant()));
+        return Task.CompletedTask;
+    }
+}
+
+// Register once at startup
+ExcelOverWriter.RegisterOverWriteFunction(new UpperFunction());
+```
+
+Then in any cell:
+
+```text
+#Upper($Client)
+```
+
+`args` already has `$symbols` resolved by your `IExcelSymbolConverter`. See **[docs/built-in-functions.md](docs/built-in-functions.md)** for argument-parsing rules, real-world recipes (barcodes, signature stamps, computed totals, async DB lookups), and the full extensibility contract.
+
+---
+
 ## Detailed documentation
 
 * **[Getting started](docs/getting-started.md)** — install, font resolvers, every `ExcelConverter.ConvertToPdf` overload, troubleshooting.
