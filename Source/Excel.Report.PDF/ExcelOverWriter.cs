@@ -181,10 +181,18 @@ namespace Excel.Report.PDF
         {
             for (int i = startRow; i <= endRow;)
             {
-                await OverWriteCell(sheet, i, colCount, async t => await converter.GetData(t));
+                var leftText = sheet.GetText(i, 1).Trim();
+
+                // On a loop directive row, suppress custom function invocations in this pre-pass:
+                // $item.* references resolve to null with the outer converter, so a naive function
+                // would write garbage into the template cell and CopyRows would propagate it.
+                // The recursive pass runs OverWriteCell again with the per-element converter and
+                // invokes functions there with resolved args.
+                var isLoopRow = leftText.StartsWith("#LoopRow") || leftText.StartsWith("#PagedLoopRows");
+                await OverWriteCell(sheet, i, colCount, async t => await converter.GetData(t), isLoopRow);
 
                 LoopInfo loopInfo = new();
-                if (!await TryParseLoop(sheet.GetText(i, 1).Trim(), converter, loopInfo, sheet.Name, pageLoopRowsInfoList))
+                if (!await TryParseLoop(leftText, converter, loopInfo, sheet.Name, pageLoopRowsInfoList))
                 {
                     i++;
                     continue;
@@ -326,7 +334,7 @@ namespace Excel.Report.PDF
             return false;
         }
 
-        static async Task OverWriteCell(IXLWorksheet sheet, int rowIndex, int colCount, Func<string, Task<ExcelOverWriteCell?>> converter)
+        static async Task OverWriteCell(IXLWorksheet sheet, int rowIndex, int colCount, Func<string, Task<ExcelOverWriteCell?>> converter, bool skipFunctions = false)
         {
             for (var i = 0; i < colCount; i++)
             {
@@ -334,7 +342,8 @@ namespace Excel.Report.PDF
                 var text = sheet.GetText(rowIndex, cellIndex).Trim();
 
                 if (text.StartsWith("#"))
-                { 
+                {
+                    if (skipFunctions) continue;
                     foreach(var function in _overWriteFunctions)
                     {
                         if (text.StartsWith($"#{function.Name}("))
