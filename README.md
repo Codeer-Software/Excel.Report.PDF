@@ -1,165 +1,190 @@
-﻿# Excel.Report.PDF
+# Excel.Report.PDF
 
-## Features ...
-Convert Excel to PDF.<br>
-<img src="Image/SampleExcelToPDF.png" width="800">
+[![NuGet Excel.Report.PDF](https://img.shields.io/nuget/v/Excel.Report.PDF.svg?label=Excel.Report.PDF)](https://www.nuget.org/packages/Excel.Report.PDF/)
+[![NuGet Excel.Report.PrintDocument](https://img.shields.io/nuget/v/Excel.Report.PrintDocument.svg?label=Excel.Report.PrintDocument)](https://www.nuget.org/packages/Excel.Report.PrintDocument/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-Overwrite Excel with data according to the symbol.(And convert to Excel to PDF)<br>
-<img src="Image/SampleQuotation.png" width="800">
+A .NET library that converts Excel workbooks into PDF and turns Excel files into reusable, data-driven report templates — without depending on Microsoft Office or COM Interop.
 
-## Getting Started
-Excel.Report.PDF from NuGet.
+* **Excel → PDF**: Pure managed conversion via [ClosedXML](https://github.com/ClosedXML/ClosedXML) + [PdfSharp](https://github.com/empira/PDFsharp).
+* **Template engine**: Place `$symbols` and `#directives` directly in cells and overwrite the workbook with your data at runtime.
+* **Multi-page reports**: Split long lists across `First` / `Body` / `Last` page templates with automatic page numbering.
+* **Built-in renderers**: Drop in dynamic images and QR codes from cell directives, or register your own.
+* **GDI+ printing**: Bind the same rendering pipeline to `System.Drawing.Printing.PrintDocument` (Windows) for preview / direct printing.
 
-    PM> Install-Package Excel.Report.PDF
+| Excel → PDF | Quotation template |
+| --- | --- |
+| <img src="Image/SampleExcelToPDF.png" width="400"> | <img src="Image/SampleQuotation.png" width="400"> |
 
-First you need to implement IFontResolver.
-This is a PDFsharp feature used internally.
-I think you can understand if you refer to the test project.
-->Source/Test/Test
+---
+
+## Table of contents
+
+* [Install](#install)
+* [Quick start](#quick-start)
+  * [1. Set up a font resolver](#1-set-up-a-font-resolver)
+  * [2. Convert Excel to PDF](#2-convert-excel-to-pdf)
+  * [3. Overwrite a template, then convert](#3-overwrite-a-template-then-convert)
+* [Cell directive reference](#cell-directive-reference)
+* [Detailed documentation](#detailed-documentation)
+* [Requirements](#requirements)
+* [License](#license)
+
+---
+
+## Install
+
+```powershell
+# Core: Excel → PDF + template engine
+PM> Install-Package Excel.Report.PDF
+
+# Optional: Bind to System.Drawing.Printing (Windows only — preview / printer output)
+PM> Install-Package Excel.Report.PrintDocument
+```
+
+`Excel.Report.PDF` targets **.NET 6.0** and runs on Windows / Linux / macOS.
+`Excel.Report.PrintDocument` is Windows-only because it depends on GDI+ via `System.Drawing.Common`.
+
+---
+
+## Quick start
+
+### 1. Set up a font resolver
+
+PdfSharp does not ship with fonts. Implement `IFontResolver` once at startup and return whichever font bytes you want PdfSharp to embed.
+
 ```csharp
+using PdfSharp.Fonts;
+
 public class CustomFontResolver : IFontResolver
 {
     public byte[] GetFont(string faceName)
-        //Implement so that you can get as many fonts as you need.
-        => faceName.EndsWith("#b") ? Resources.NotoSansJP_ExtraBold : Resources.NotoSansJP_Regular;
+        => faceName.EndsWith("#b") ? Resources.NotoSansJP_ExtraBold
+                                   : Resources.NotoSansJP_Regular;
 
     public FontResolverInfo ResolveTypeface(string familyName, bool isBold, bool isItalic)
     {
-        var faceName = familyName; 
+        var faceName = familyName;
         if (isBold) faceName += "#b";
         return new FontResolverInfo(faceName);
     }
 }
-```
-```csharp
+
 GlobalFontSettings.FontResolver = new CustomFontResolver();
 ```
 
-Next, you can convert by specifying Excel. The first argument is the Excel path or Stream, and the second argument is the number or name of the target sheet.
+A more sophisticated example that loads fonts directly from the Windows Fonts registry lives in
+[`Source/TestWinFormsApp/WindowsInstalledFontResolver.cs`](Source/TestWinFormsApp/WindowsInstalledFontResolver.cs).
+
+See **[docs/getting-started.md](docs/getting-started.md)** for the full setup walkthrough.
+
+### 2. Convert Excel to PDF
+
 ```csharp
-using var outStream = ExcelConverter.ConvertToPdf(workbookPath, 1);
-File.WriteAllBytes(pdfPath, outStream.ToArray());
+using Excel.Report.PDF;
+
+// Whole workbook → multi-page PDF
+using var pdf = ExcelConverter.ConvertToPdf("report.xlsx");
+File.WriteAllBytes("report.pdf", pdf.ToArray());
+
+// Specific sheet by 1-based position
+using var pdfSheet1 = ExcelConverter.ConvertToPdf("report.xlsx", 1);
+
+// Specific sheet by name
+using var pdfNamed = ExcelConverter.ConvertToPdf("report.xlsx", "Summary");
+
+// Stream overloads are also available
+using var fs = File.OpenRead("report.xlsx");
+using var pdfFromStream = ExcelConverter.ConvertToPdf(fs);
 ```
-## Overwrite Excel
-There is also a function to overwrite Excel.
-First, create an Excel file according to the rules.
 
-### 1. [$]
-Write the string you want to convey to the program after the $ sign.<br>
-<img src="Image/SymbolDollar.png">
+The renderer respects Excel's page setup (paper size, margins, scaling, page breaks, centering) and reproduces fonts, fills, borders (including `Double`), text rotation, vertical text, and embedded pictures.
 
-### 2. [#LoopRow($elements, elementName, copyRowCount)], [#LoopRowData($elements, elementName, copyRowCount)]
-LoopRow copies the specified row copyRowCount times and adds a row.
-LoopRowData uses the original format without copying the row. It only loops over the data.
-You can specify the symbol of the repeating element in elementName for the column to loop over.
+### 3. Overwrite a template, then convert
 
-| Name |  |
-| ---- | ---- |
-| $elements | A loop element. Specifies the symbol returned by IEnumerable. |
-| elementName | The name of a repeating element used within a row. |
-| copyRowCount | Number of rows to copy. |
-
-<br>
-<img src="Image/SymbolRowCopy.png">
-Next, programmatically overwrite this Excel.
-Pass IExcelSymbolConverter to the OverWrite method.
-This sample uses ObjectExcelSymbolConverter, which is one of the implementations of IExcelSymbolConverter provided by Excel.Report.PDF.
-IExcelSymbolConverter is easy to implement, so please try implementing it according to your situation.
-In that case, the implementation of ObjectExcelSymbolConverter will be helpful.
+Drop `$symbols` and `#directives` straight into your `.xlsx` template, then bind a data object at runtime.
 
 ```csharp
-//Sample data.
-var data = new Quotation 
-{
-    Title = "宴会時の食材",
-    Client = "エクセルコンサルティング株式会社",
-    PersonInCharge = "大谷正一"
-};
-data.Details.Add(new()
-{
-    Title = "鯛",
-    Detail = "新鮮",
-    Price = 10000,
-    Discount = 0,
-});
-data.Details.Add(new()
-{
-    Title = "鰤",
-    Detail = "新鮮",
-    Price = 20000,
-    Discount = 0,
-});
-data.Details.Add(new()
-{
-    Title = "ハマチ",
-    Detail = "ご奉仕品",
-    Price = 30000,
-    Discount = 2000,
-});
-data.Details.Add(new()
-{
-    Title = "蛸",
-    Detail = "ご奉仕品",
-    Price = 40000,
-    Discount = 1000,
-});
+using ClosedXML.Excel;
+using Excel.Report.PDF;
 
-using var book = new XLWorkbook(filePath);
-var symbolConverter = new ObjectExcelSymbolConverter(data);
+var data = new Quotation
+{
+    Title = "Banquet ingredients",
+    Client = "Excel Consulting Inc.",
+    PersonInCharge = "Shoichi Otani",
+};
+data.Details.Add(new() { Title = "Sea bream", Detail = "Fresh",      Price = 10000, Discount = 0    });
+data.Details.Add(new() { Title = "Yellowtail", Detail = "Fresh",     Price = 20000, Discount = 0    });
+data.Details.Add(new() { Title = "Hamachi",    Detail = "Bargain",   Price = 30000, Discount = 2000 });
+data.Details.Add(new() { Title = "Octopus",    Detail = "Bargain",   Price = 40000, Discount = 1000 });
+
+using var book = new XLWorkbook("Quotation.xlsx");
+
+// Overwrite a single sheet
 await book.Worksheet(1).OverWrite(new ObjectExcelSymbolConverter(data));
 
-// Convert Excel to PDF
-var newStream = new MemoryStream();
-book.SaveAs(newStream);
-using var outStream = ExcelConverter.ConvertToPdf(newStream, 1);
-File.WriteAllBytes(pdfPath, outStream.ToArray());
+// ...or overwrite every sheet (and expand multi-page #PagedLoopRows templates)
+// await book.OverWrite(new ObjectExcelSymbolConverter(data));
+
+// Render the populated workbook to PDF
+using var ms = new MemoryStream();
+book.SaveAs(ms);
+using var pdf = ExcelConverter.ConvertToPdf(ms, 1);
+File.WriteAllBytes("Quotation.pdf", pdf.ToArray());
 ```
 
-### 3. [#PagedLoopRows(pageType, rowsPerPage, $elements, elementName, blockRowCount)]
-It can be specified in column A.Copies the specified row as many times as blockRowCount and adds the row.  
-By specifying pageType and rowsPerPage, you can configure the page layout and the number of rows displayed per page for each of the three page types: `First` (first page), `Body` (middle pages), and `Last` (final page).
+`ObjectExcelSymbolConverter` resolves symbols against the public properties of the bound object (and supports nested loops). To map symbols to a database row, an API response, or any other source, implement [`IExcelSymbolConverter`](Source/Excel.Report.PDF/IExcelSymbolConverter.cs) — see **[docs/template-overwrite.md](docs/template-overwrite.md)**.
 
-* **First**: The page that appears once at the very beginning of the report or list.
-* **Body**: The middle pages used to output the main data across multiple pages.
-* **Last**: The page that appears once at the very end to close the report or list.
+---
 
-| Name |  |
-| ---- | ---- |
-| pageType | Specify the page type. For each loop, select exactly one of: First, Body, or Last. |
-| rowsPerPage | Number of lines to display per page. |
-| $elements | A loop element. Specifies the symbol returned by IEnumerable. |
-| elementName | The name of a repeating element used within a row. |
-| blockRowCount | Number of rows to copy. |
+## Cell directive reference
 
-<br>
-MultiPageSheetSample
-<img src="Image/MultiPageSheetSample.png">
+All directives live in cell text. `$` resolves to a value; `#` invokes a function, loop, or rendering command.
 
-MultiPageSheetSample convert to PDF
-<img src="Image/MultiPageSheetSamplePDF.png">
-Please refer to "2. [#LoopRow($elements, elementName, copyRowCount)]" for sample data.
+| Directive | Where | Purpose |
+| --- | --- | --- |
+| `$name` | any cell | Replace the cell value with `converter.GetData("name")`. |
+| `#LoopRow($items, item, n)` | column **A** | Insert-mode loop. Copies `n` rows above the current row, once per element of `$items`. |
+| `#LoopRowData($items, item, n)` | column **A** | Data-only loop. Reuses the existing row format and writes values without inserting rows. |
+| `#PagedLoopRows(pageType, rowsPerPage, $items, item, blockRowCount)` | column **A** | Distributes a long list across `First` / `Body` / `Last` template sheets — see [docs/multi-page.md](docs/multi-page.md). |
+| `#Image($bytesOrStream[, widthScale[, heightScale]])` | any cell | Insert a picture from `byte[]` or `Stream`. |
+| `#QR($text[, pixelsPerModule])` | any cell | Insert a QR code (PNG, ECC level **M**). Default `pixelsPerModule = 10`. |
+| `#Page` | any cell except column A | Render the current page number when converting to PDF. |
+| `#PageCount` | any cell except column A | Render the total page count (resolved after layout). |
+| `#PageOf("/")` | any cell except column A | Render `current<separator>total`. The separator is the literal in the parentheses. |
+| `#Empty` | any cell | Reserve the cell area for layout calculations but draw nothing. |
+| `#FitColumn` | **A1** only | Scale the rendered output so the used column width fills the printable page width. |
 
-### 4. \[\#Page][#PageCount][#PageOf("/")]
-It can display number of pages. It can be specified in any column except column A. It is only available for PDF output.
-| Name |  |
-| ---- | ---- |
-| #Page | Current number of pages. |
-| #PageCount | Total number of pages. |
-| #PageOf("/") | Current and total page counts. Specify the separator in the parentheses (e.g., "of").|
+Multiple cell directives can coexist on the same cell separated by `|` (for example `#Empty | #FitColumn`).
 
-<br>
-<img src="Image/NumberOfPages.png">
+Detailed semantics, edge cases, and worked examples are split across the documents below.
 
-## Special Rendering Directives
+---
 
-### 1. `#Empty`
-By default, only cells that contain values are rendered into the PDF.  
-If you put `#Empty` in a cell, the text itself will not be drawn, but **the cell’s area will still be included in the rendering range**.
+## Detailed documentation
 
-Use this when you want the cell’s presence to affect the layout, but you don’t want any visible text.
+* **[Getting started](docs/getting-started.md)** — install, font resolvers, every `ExcelConverter.ConvertToPdf` overload, troubleshooting.
+* **[Template overwrite](docs/template-overwrite.md)** — `$symbols`, `#LoopRow` vs `#LoopRowData`, nested loops, custom `IExcelSymbolConverter`.
+* **[Multi-page reports](docs/multi-page.md)** — `#PagedLoopRows`, the `First` / `Body` / `Last` page model, and how rows are distributed.
+* **[Built-in cell functions](docs/built-in-functions.md)** — `#Image`, `#QR`, and writing your own `IOverWriteFunction`.
+* **[PrintDocument integration](docs/print-document.md)** — bind the renderer to `System.Drawing.Printing.PrintDocument` for print preview / direct printing on Windows.
+* **[Special rendering directives](docs/special-directives.md)** — `#Empty`, `#FitColumn`, page-number directives, vertical / rotated text.
+* **[Public API reference](docs/api-reference.md)** — every public type, method, and extension across both packages.
 
-### 2. `#FitColumn`
-This can only be specified in the `A1` cell.  
-If you write `#FitColumn` in `A1`, the content will be automatically scaled so that it fits the PDF drawing area **based on the Excel column width**, excluding the left and right margins.
+---
 
-Use this when you want the PDF display size to be adjusted according to the column width in Excel.
+## Requirements
+
+| Package | Target | Key dependencies |
+| --- | --- | --- |
+| `Excel.Report.PDF` | `net6.0` | ClosedXML 0.105.x, PdfSharp 6.2.x, QRCoder 1.7.x |
+| `Excel.Report.PrintDocument` | `net6.0` (Windows) | `Excel.Report.PDF`, `System.Drawing.Common` 8.0.x |
+
+Both libraries are pure managed code — **no Microsoft Office, no COM, no native interop**.
+
+---
+
+## License
+
+[MIT](LICENSE) © Codeer Software
