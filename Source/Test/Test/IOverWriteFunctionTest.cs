@@ -452,6 +452,35 @@ namespace Test
             sheet.Cell(4, 2).Value.GetText().Is("C/3");
         }
 
+        [Test]
+        public async Task NestedLoopRowDataUsesEachNestedConverterScope()
+        {
+            using var book = new XLWorkbook();
+            var sheet = book.AddWorksheet("Sheet1");
+            sheet.Cell(1, 1).SetValue("Header");
+            sheet.Cell(2, 1).SetValue("#LoopRowData($Groups, group, 2)");
+            sheet.Cell(2, 2).SetValue("$group.Name");
+            sheet.Cell(3, 1).SetValue("#LoopRowData($group.Items, item)");
+            sheet.Cell(3, 2).SetValue("$item.Label");
+
+            var data = new
+            {
+                Groups = new[]
+                {
+                    new { Name = "A", Items = new[] { new { Label = "A1" }, new { Label = "A2" } } },
+                    new { Name = "B", Items = new[] { new { Label = "B1" } } }
+                }
+            };
+
+            await sheet.OverWrite(new ObjectExcelSymbolConverter(data));
+
+            sheet.Cell(2, 2).GetText().Is("A");
+            sheet.Cell(3, 2).GetText().Is("A1");
+            sheet.Cell(4, 2).GetText().Is("A2");
+            sheet.Cell(5, 2).GetText().Is("B");
+            sheet.Cell(6, 2).GetText().Is("B1");
+        }
+
         // For a multi-row loop block (rowCopyCount > 1), only the directive row gets function
         // suppression. Functions on the *other* rows of the block must still be invoked
         // normally during the recursive pass. This pins down the boundary of the fix.

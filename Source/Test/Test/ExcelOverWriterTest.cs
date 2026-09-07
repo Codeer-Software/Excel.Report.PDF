@@ -46,9 +46,57 @@ namespace Test
             public int Id { get; set; }
         }
 
+        class DataManyProps
+        {
+            public string Prop1 { get; set; } = "Prop1";
+            public string Prop2 { get; set; } = "Prop2";
+            public string Prop3 { get; set; } = "Prop3";
+            public string Prop4 { get; set; } = "Prop4";
+            public string Prop5 { get; set; } = "Prop5";
+            public string Prop6 { get; set; } = "Prop6";
+            public string Prop7 { get; set; } = "Prop7";
+            public string Prop8 { get; set; } = "Prop8";
+            public string Prop9 { get; set; } = "Prop9";
+            public string Prop10 { get; set; } = "Prop10";
+
+            public string Prop11 { get; set; } = "Prop11";
+            public string Prop12 { get; set; } = "Prop12";
+            public string Prop13 { get; set; } = "Prop13";
+            public string Prop14 { get; set; } = "Prop14";
+            public string Prop15 { get; set; } = "Prop15";
+            public string Prop16 { get; set; } = "Prop16";
+            public string Prop17 { get; set; } = "Prop17";
+            public string Prop18 { get; set; } = "Prop18";
+            public string Prop19 { get; set; } = "Prop19";
+            public string Prop20 { get; set; } = "Prop20";
+
+            public string Prop21 { get; set; } = "Prop21";
+            public string Prop22 { get; set; } = "Prop22";
+            public string Prop23 { get; set; } = "Prop23";
+            public string Prop24 { get; set; } = "Prop24";
+            public string Prop25 { get; set; } = "Prop25";
+            public string Prop26 { get; set; } = "Prop26";
+            public string Prop27 { get; set; } = "Prop27";
+            public string Prop28 { get; set; } = "Prop28";
+            public string Prop29 { get; set; } = "Prop29";
+            public string Prop30 { get; set; } = "Prop30";
+
+            public string Prop31 { get; set; } = "Prop31";
+            public string Prop32 { get; set; } = "Prop32";
+            public string Prop33 { get; set; } = "Prop33";
+            public string Prop34 { get; set; } = "Prop34";
+            public string Prop35 { get; set; } = "Prop35";
+            public string Prop36 { get; set; } = "Prop36";
+            public string Prop37 { get; set; } = "Prop37";
+            public string Prop38 { get; set; } = "Prop38";
+            public string Prop39 { get; set; } = "Prop39";
+            public string Prop40 { get; set; } = "Prop40";
+        }
+
         const string EmptySheetInputFileName = "EmptySheetTest.xlsx";
         const string RecursiveLoop2TestInputFileName = "ExcelOverWriterTest_RecursiveLoop2Test.xlsx";
         const string RecursiveLoop2TestMergedInputFileName = "ExcelOverWriterTest_RecursiveLoop2Test(Merged).xlsx";
+        const string RecursiveLoop2TestManyRowsAndPropsInputFileName = "ExcelOverWriterTest_RecursiveLoop2Test(ManyRowsAndProps).xlsx";
 
         [OneTimeSetUp]
         public void OneTimeSetUp()
@@ -83,6 +131,12 @@ namespace Test
                 RecursiveLoop2TestMergedInputWorkbook( recursiveLoop2TestMergedInputPath );
             }
 
+            var recursiveLoop2TestManyRowsAndPropsInputPath = Path.Combine( TestEnvironment.PdfSrcPath, RecursiveLoop2TestManyRowsAndPropsInputFileName );
+            if (!File.Exists( recursiveLoop2TestManyRowsAndPropsInputPath )) {
+                Directory.CreateDirectory( TestEnvironment.PdfSrcPath );
+                RecursiveLoop2TestManyRowsAndPropsInputWorkbook( recursiveLoop2TestManyRowsAndPropsInputPath );
+            }
+
         }
 
         private void RecursiveLoop2TestInputWorkbook(string path)
@@ -102,6 +156,9 @@ namespace Test
             sheet.Cell( 3, 1 ).SetValue( "#LoopRow($x.Loop2, y, 1)" );
             sheet.Cell( 3, 2 ).SetValue( "$y.Id" );
             sheet.Cell( 3, 4 ).Style.Fill.BackgroundColor = XLColor.Red;
+
+            // filter on C1 to D1
+            sheet.Range( 1, 3, 1, 4 ).SetAutoFilter();
 
             book.SaveAs( path );
         }
@@ -123,6 +180,38 @@ namespace Test
             sheet.Cell( 3, 1 ).SetValue( "#LoopRow($x.Loop2, y, 2)" );
             sheet.Range( 3, 2, 4, 6 ).Merge();
             sheet.Cell( 3, 2 ).SetValue( "$y.Id" );
+
+            book.SaveAs( path );
+        }
+
+        private void RecursiveLoop2TestManyRowsAndPropsInputWorkbook(string path) {
+            using var book = new XLWorkbook();
+            var sheet = book.AddWorksheet( "Sheet1" );
+
+            sheet.Column( 1 ).Width = 30;
+            sheet.Cell( 1, 1 ).SetValue( "#LoopRow($Loop1Data, x, 3)" );
+            sheet.Range( 1, 2, 1, 43 ).Merge().Style.Fill.BackgroundColor = XLColor.Yellow;
+            sheet.Cell( 1, 2 ).SetValue( "$x.Header1" );
+            
+            sheet.Cell( 2, 1 ).SetValue( "#LoopRow($x.Loop2Data, y, 2)" );
+            sheet.Cell( 2, 3 ).SetValue( "$y.Header2" );
+
+            sheet.Cell( 3, 1 ).SetValue( "#LoopRow($y.Loop3Data, z, 1)" );
+
+            System.Reflection.PropertyInfo[] props = typeof( DataManyProps ).GetProperties();
+            for (int i = 0; i < props.Length; i++)
+            {
+                System.Reflection.PropertyInfo pi = props[i];
+                sheet.Cell( 3, 4+i ).SetValue( $"$z.{pi.Name}" )
+                    .Style.Fill.SetBackgroundColor(
+                        (i % 3) switch
+                        {
+                            0 => XLColor.LightBlue,
+                            1 => XLColor.LightGreen,
+                            _ => XLColor.LightPink
+                        }
+                    );
+            }
 
             book.SaveAs( path );
         }
@@ -370,6 +459,10 @@ namespace Test
 
                 var sheet = book.Worksheets.First();
 
+                // A1:The Loop directives should not be output as they are, and the cell should be empty.
+                sheet.Cell( 1, 1 ).Value.IsBlank.IsTrue();
+                sheet.Cell( 2, 1 ).Value.IsBlank.IsTrue();
+
                 // B1:the part unrelated to the loop, verify if the data is output as it is.
                 var noLoopData = sheet.Cell(1, 2).Value.GetText();
                 noLoopData.Is("NameA");
@@ -463,6 +556,15 @@ namespace Test
                 // D6: Fill should be yellow
                 var d6FillColor = sheet.Cell( 6, 4 ).Style.Fill.BackgroundColor.Color;
                 d6FillColor.Is( XLColor.Yellow.Color, "D6 should be yellow" );
+
+                // C1 to D1: should have autofilter
+                var autoFilter = sheet.AutoFilter;
+                autoFilter.IsNotNull();
+                autoFilter.Range.RangeAddress.FirstAddress.RowNumber.Is( 1 );
+                autoFilter.Range.RangeAddress.FirstAddress.ColumnNumber.Is( 3 );
+                autoFilter.Range.RangeAddress.LastAddress.RowNumber.Is( 1 );
+                autoFilter.Range.RangeAddress.LastAddress.ColumnNumber.Is( 4 );
+
             }
 
             using var outStream = ExcelConverter.ConvertToPdf(Path.Combine(TestEnvironment.TestResultsPath, RecursiveLoop2TestInputFileName ), 1);
@@ -470,7 +572,8 @@ namespace Test
         }
 
         [Test]
-        public async Task RecursiveLoop2MergedTest() {
+        public async Task RecursiveLoop2MergedTest()
+        {
             var data = new Data {
                 Name = "NameA"
             };
@@ -536,6 +639,112 @@ namespace Test
 
             using var outStream = ExcelConverter.ConvertToPdf( Path.Combine( TestEnvironment.TestResultsPath, RecursiveLoop2TestMergedInputFileName ), 1 );
             File.WriteAllBytes( Path.Combine( TestEnvironment.TestResultsPath, Path.ChangeExtension( RecursiveLoop2TestMergedInputFileName, "pdf" ) ), outStream.ToArray() );
+        }
+
+        [Test]
+        [Explicit( "This is a test for large row count with many properties, it may take a long time to run" )]
+        public async Task RecursiveLoop2LargeRowCountWithManyPropsTest()
+        {
+
+            var sourceData = Enumerable
+                .Range( 0, 50000 )
+                .Select( r =>
+                    {
+                        var g1Header = string.Concat( "[G1.", r % 100, "] Prop1" );
+                        var g2Header = string.Concat( "[G2.", r % 10, "] Prop2" );
+                        return new DataManyProps()
+                            {
+                                Prop1 = g1Header,
+                                Prop2 = g2Header,
+                                Prop3 = Guid.NewGuid().ToString("N"),
+                        }
+                        ;
+                    }
+                )
+                .ToArray()
+            ;
+
+            var data = new
+            {
+                Loop1Data = sourceData
+                .GroupBy( x => x.Prop1 )
+                .Select( g => new
+                    {
+                        Header1 = g.Key,
+                        Loop2Data = g
+                            .GroupBy( x => x.Prop2 )
+                            .Select( g2 => new
+                                {
+                                    Header2 = g2.Key,
+                                    Loop3Data = g2
+                                }
+                            )
+                            .ToArray()
+                    }
+                )
+                .ToArray()
+            };
+
+            var converter = new ObjectExcelSymbolConverter( data );
+
+            byte[] templateBytes;
+            using (var templateStream = new FileStream( Path.Combine( TestEnvironment.PdfSrcPath, RecursiveLoop2TestManyRowsAndPropsInputFileName ), FileMode.Open, FileAccess.Read, FileShare.ReadWrite ))
+            using (var memoryStream = new MemoryStream())
+            {
+                templateStream.CopyTo( memoryStream );
+                templateBytes = memoryStream.ToArray();
+            }
+
+            // Warm up JIT, getter compilation, and ClosedXML before collecting timings.
+            using (var warmupBook = new XLWorkbook( new MemoryStream( templateBytes, writable: false ) ))
+            {
+                await warmupBook.Worksheets.First().OverWrite( converter );
+            }
+
+            const int measuredRuns = 3; // Median reduces noise from occasional GC or OS activity.
+            var timings = new long[measuredRuns];
+            XLWorkbook? lastBook = null;
+            var isBookSaved = false;
+            try
+            {
+                for (int i = 0; i < measuredRuns; i++)
+                {
+                    var book = new XLWorkbook( new MemoryStream( templateBytes, writable: false ) );
+                    lastBook?.Dispose();
+                    lastBook = book;
+
+                    var sw = System.Diagnostics.Stopwatch.StartNew();
+                    await book.Worksheets.First().OverWrite( converter );
+                    sw.Stop();
+                    timings[i] = sw.ElapsedMilliseconds;
+
+                    if (!isBookSaved) {
+                        book.SaveAs( Path.Combine( TestEnvironment.TestResultsPath, RecursiveLoop2TestManyRowsAndPropsInputFileName ) );
+                        isBookSaved = true;
+                    }
+                }
+
+                Array.Sort( timings );
+                Console.WriteLine( $"OverWrite timings: {string.Join( ", ", timings )} ms; median: {timings[measuredRuns / 2]} ms" );
+
+                var sheet = lastBook!.Worksheets.First();
+                sheet.Cell( 1, 2 ).GetText().Is( "[G1.0] Prop1" );
+                sheet.Cell( 2, 3 ).GetText().Is( "[G2.0] Prop2" );
+                sheet.Cell( 3, 4 ).GetText().Is( "[G1.0] Prop1" );
+                sheet.Cell( 3, 43 ).GetText().Is( "Prop40" );
+
+                // Verify the styled path kept both the repeated header style and alternating leaf styles.
+                sheet.Cell( 1, 2 ).Style.Fill.BackgroundColor.Color.Is( XLColor.Yellow.Color, "The repeated header should stay yellow" );
+                sheet.Cell( 3, 4 ).Style.Fill.BackgroundColor.Color.Is( XLColor.LightBlue.Color, "The first leaf should stay light blue" );
+                sheet.Cell( 3, 5 ).Style.Fill.BackgroundColor.Color.Is( XLColor.LightGreen.Color, "The second leaf should stay light green" );
+                sheet.Cell( 1, 2 ).MergedRange().IsNotNull( "The repeated header merge should be restored" );
+
+            }
+            finally
+            {
+                lastBook?.Dispose();
+            }
+
         }
 
 
